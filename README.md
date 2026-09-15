@@ -631,6 +631,55 @@ Windows Setup should see the iSCSI disk as the installation destination.
 
 Install Windows normally.
 
+# 14.1 Remember the Windows partition labels
+
+After installation Windows PE won't reboot since we run the setup.exe with /noreboot params.
+
+```cmd
+echo list volume > diskpart.txt
+
+diskpart /s diskpart.txt
+```
+
+Example:
+
+```cmd
+Volume ###  Ltr  Label        Fs     Type        Size     Status     Info
+----------  ---  -----------  -----  ----------  -------  ---------  --------
+Volume 0     C   Windows      NTFS   Partition    99 GB   Healthy    Boot
+Volume 1         System Rese  NTFS   Partition    500 MB  Healthy    System
+```
+
+# 14.2 Disable Paging Files and Shutdown the Windows PE
+
+```cmd
+reg load HKLM\OFFLINE_SYSTEM C:\Windows\System32\config\SYSTEM
+
+reg add "HKLM\OFFLINE_SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v PagingFiles /t REG_MULTI_SZ /d ""
+
+reg unload HKLM\OFFLINE_SYSTEM
+
+wpeutil shutdown
+```
+
+# 14.3 Update the iPXE Script to Boot Windows from the iSCSI Target
+
+After Windows has been installed, replace the iPXE boot script with the following so the client boots directly from the iSCSI master disk as normal Windows:
+
+```bash
+cat << __EOF__
+#!ipxe
+
+dhcp net0
+
+set net0/gateway 0.0.0.0
+set keep-san 1
+set next-server 192.168.100.243
+
+sanboot -d 0x80 iscsi:${next-server}::::iqn.2026-09.wawads.dev:master
+__EOF__ > /var/www/html/ipxe/boot.ipxe
+```
+
 ---
 
 # 15. Prepare the Master Image
@@ -642,7 +691,8 @@ After Windows has been installed:
 3. Install required drivers.
 4. Allow Windows to populate its driver store.
 5. Configure the system as the common client image.
-6. Shut down the machine before making further storage changes.
+6. If the clients use different hardware, boot the master image on each hardware configuration and allow Windows to populate the driver store with the appropriate drivers.
+7. Shut down the machine before making further storage changes.
 
 The master image is intended to be shared by clients with different hardware configurations.
 
@@ -680,7 +730,7 @@ Windows
 
 ---
 
-# 17. Troubleshooting
+# Troubleshooting
 
 ## PXE client does not receive an iPXE boot file
 
