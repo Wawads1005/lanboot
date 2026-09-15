@@ -728,6 +728,144 @@ Windows master image
 Windows
 ```
 
+# 17. Update the Master Image
+
+To update the master image without modifying the original master immediately, create an LVM snapshot of the master logical volume and expose the snapshot through a separate iSCSI target.
+
+## 17.1 Create the Update Snapshot
+
+Create a 20 GB copy-on-write area for the snapshot:
+
+```bash
+sudo lvcreate -s -L 20G -n master-update /dev/lanboot/master
+```
+
+The snapshot initially represents the same disk contents as `master`.
+
+The 20 GB size is the amount of snapshot space available for changes made while using the snapshot. It is **not** the size of the Windows disk.
+
+Verify the snapshot:
+
+```bash
+sudo lvs
+```
+
+You should see something similar to:
+
+```text
+LV            VG       Attr       LSize   Pool Origin
+master        lanboot  -wi-a----- 100.00g
+master-update lanboot  swi-a-s--- 100.00g       master
+```
+
+## 17.2 Export the Update Snapshot Through iSCSI
+
+Create a block backstore for the snapshot:
+
+```bash
+sudo targetcli /backstores/block create master-update /dev/lanboot/master-update
+```
+
+Create a separate iSCSI target:
+
+```bash
+sudo targetcli /iscsi create iqn.2026-09.wawads.dev:master-update
+```
+
+Create a LUN:
+
+```bash
+sudo targetcli /iscsi/iqn.2026-09.wawads.dev:master-update/tpg1/luns create /backstores/block/master-update
+```
+
+Configure the target:
+
+```bash
+sudo targetcli /iscsi/iqn.2026-09.wawads.dev:master-update/tpg1 set attribute authentication=0 demo_mode_write_protect=0 prod_mode_write_protect=0 generate_node_acls=1
+```
+
+Save the configuration:
+
+```bash
+sudo targetcli saveconfig
+```
+
+Verify:
+
+```bash
+sudo targetcli ls
+```
+
+## 17.3 Boot the Update Image
+
+Update the iPXE script to boot the snapshot:
+
+```bash
+cat <<EOF > /var/www/html/ipxe/boot.ipxe
+#!ipxe
+
+dhcp net0
+
+set net0/gateway 0.0.0.0
+set keep-san 1
+set next-server 192.168.100.243
+
+sanboot -d 0x80 iscsi:${next-server}::::iqn.2026-09.wawads.dev:master-update
+EOF
+```
+
+Boot the technician machine.
+
+Windows will now boot from the `master-update` snapshot rather than directly from `master`.
+
+You can now make changes such as:
+
+- Install Windows updates.
+- Install or update applications.
+- Download game updates.
+- Install or update drivers.
+- Modify the common client configuration.
+
+All changes are written to the snapshot's copy-on-write storage.
+
+When finished, **shut the computer down completely**.
+
+## 17.4 Keep the Update
+
+If you are satisfied with the changes, first remove the iSCSI target and backstore:
+
+```bash
+sudo targetcli /iscsi/iqn.2026-09.wawads.dev:master-update delete
+sudo targetcli /backstores/block/master-update delete
+sudo targetcli saveconfig
+```
+
+Then merge the snapshot into the master:
+
+```bash
+sudo lvconvert --merge /dev/lanboot/master-update
+```
+
+The snapshot changes will be merged into the `master` logical volume.
+
+## 17.5 Discard the Update
+
+If you do not want to keep the changes, remove the iSCSI target and backstore:
+
+```bash
+sudo targetcli /iscsi/iqn.2026-09.wawads.dev:master-update delete
+sudo targetcli /backstores/block/master-update delete
+sudo targetcli saveconfig
+```
+
+Then remove the snapshot:
+
+```bash
+sudo lvremove /dev/lanboot/master-update
+```
+
+The original `master` logical volume remains unchanged.
+
 ---
 
 # Troubleshooting
@@ -864,7 +1002,7 @@ The goal is to keep Lanboot itself as an orchestration layer rather than replaci
 - [ ] Disk usage monitoring
 - [ ] iPXE UEFI support
 - [ ] Client caching
-- [ ] Copy-on-write / overlay storage
+- [x] Copy-on-write / overlay storage
 - [ ] Automated Windows image preparation
 
 ---
