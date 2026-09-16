@@ -1,0 +1,5 @@
+import { SAMBA_CONFIGURATION_DIRECTORY } from "@/constants/internals";
+
+const SMB_CONFIGURATION_FILE = `${SAMBA_CONFIGURATION_DIRECTORY}/smb.conf`;
+
+export { SMB_CONFIGURATION_FILE };

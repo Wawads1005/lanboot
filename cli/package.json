@@ -1,0 +1,30 @@
+{
+  "name": "@lanboot/cli",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node esbuild.config.mjs"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.4.1",
+      "onFail": "download"
+    }
+  },
+  "packageManager": "pnpm@12.4.1",
+  "devDependencies": {
+    "@types/ini": "^4.1.1",
+    "@types/node": "^26.5.1",
+    "tsx": "^4.23.13",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "commander": "^15.0.0",
+    "esbuild": "^0.28.2",
+    "ini": "^7.0.0",
+    "smol-toml": "^1.8.0",
+    "zod": "^4.6.5",
+    "zx": "^8.8.5"
+  }
+}
