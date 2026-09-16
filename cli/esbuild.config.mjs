@@ -14,6 +14,7 @@ async function main() {
     banner: {
       js: "#!/usr/bin/env node",
     },
+    external: ["zx"],
     sourcemap: !isProduction,
     minify: isProduction,
     logLevel: "info",

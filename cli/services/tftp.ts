@@ -11,6 +11,8 @@ async function configureTFTP(configuration: LanbootConfiguration) {
     tftpConfiguration.push("enable-tftp");
   }
 
+  await fsPromises.mkdir(tftp.root, { recursive: true });
+
   await fsPromises.writeFile(
     TFTP_CONFIGURATION_FILEPATH,
     `${tftpConfiguration.join("\n")}\n`,

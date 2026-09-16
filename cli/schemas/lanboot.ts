@@ -48,6 +48,7 @@ const SMBConfigurationSchema = z.object({
   serverString: z.string().min(1, { error: "SMB server string is required" }),
   serverRole: z.enum(["standalone", "member"]),
   shares: z.array(SMBShareConfigurationSchema),
+  mapToGuest: z.enum(["never", "bad user", "bad password"]),
 });
 
 type SMBConfiguration = z.infer<typeof SMBConfigurationSchema>;

@@ -46,7 +46,7 @@ serviceCLI
 
     console.log("Configuring SMB server...");
     await configureSMB(configurationResult.data);
-    console.log("Successfully congired SMB server.");
+    console.log("Successfully configured SMB server.");
   });
 
 export { serviceCLI };

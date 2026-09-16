@@ -231,6 +231,7 @@ const defaultConfiguration: LanbootConfiguration = {
     workgroup: "WORKGROUP",
     serverString: "Lanboot",
     serverRole: "standalone",
+    mapToGuest: "bad user",
     shares: [
       {
         name: "shared",
