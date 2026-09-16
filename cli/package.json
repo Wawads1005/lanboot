@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node esbuild.config.mjs"
+    "dev": "NODE_ENV=development node esbuild.config.mjs",
+    "build": "NODE_ENV=production node esbuild.config.mjs"
   },
   "devEngines": {
     "packageManager": {

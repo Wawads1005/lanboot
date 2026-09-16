@@ -1,6 +1,4 @@
-import { build, context } from "esbuild";
-
-process.loadEnvFile();
+import { context } from "esbuild";
 
 const isProduction = process.env.NODE_ENV === "production";
 
