@@ -15,38 +15,35 @@ class ServiceError extends CommanderError {
 
 serviceCLI.description("Lanboot service management");
 
-serviceCLI
-  .command("configure")
-  .argument("[service]", "Lanboot service name.")
-  .action(async () => {
-    const foundConfiguration = await getConfiguration();
+serviceCLI.command("configure").action(async () => {
+  const foundConfiguration = await getConfiguration();
 
-    if (!foundConfiguration) {
-      throw new ServiceError("Lanboot configuration doesn't exists.");
-    }
+  if (!foundConfiguration) {
+    throw new ServiceError("Lanboot configuration doesn't exists.");
+  }
 
-    const configurationResult =
-      LanbootConfigurationSchema.safeParse(foundConfiguration);
+  const configurationResult =
+    LanbootConfigurationSchema.safeParse(foundConfiguration);
 
-    if (!configurationResult.success) {
-      throw new ServiceError(
-        configurationResult.error.issues[0]
-          ? configurationResult.error.issues[0].message
-          : configurationResult.error.message,
-      );
-    }
+  if (!configurationResult.success) {
+    throw new ServiceError(
+      configurationResult.error.issues[0]
+        ? configurationResult.error.issues[0].message
+        : configurationResult.error.message,
+    );
+  }
 
-    console.log("Configuring DHCP server...");
-    await configureDHCP(configurationResult.data);
-    console.log("Successfully configured DHCP server.");
+  console.log("Configuring DHCP server...");
+  await configureDHCP(configurationResult.data);
+  console.log("Successfully configured DHCP server.");
 
-    console.log("Configuring TFTP server...");
-    await configureTFTP(configurationResult.data);
-    console.log("Successfully configured DHCP server.");
+  console.log("Configuring TFTP server...");
+  await configureTFTP(configurationResult.data);
+  console.log("Successfully configured TFTP server.");
 
-    console.log("Configuring SMB server...");
-    await configureSMB(configurationResult.data);
-    console.log("Successfully configured SMB server.");
-  });
+  console.log("Configuring SMB server...");
+  await configureSMB(configurationResult.data);
+  console.log("Successfully configured SMB server.");
+});
 
 export { serviceCLI };
