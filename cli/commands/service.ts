@@ -5,9 +5,9 @@ import {
 } from "@/lib/configure";
 import { LanbootConfigurationSchema } from "@/schemas/lanboot";
 import { configureDHCP } from "@/services/dhcp";
-import { installServices, startServices } from "@/services/internal";
-import { configureLIO } from "@/services/lio";
-import { configureLVM } from "@/services/lvm";
+import { startServices } from "@/services/internal";
+import { configureiSCSI } from "@/services/iscsi";
+import { configureStorage } from "@/services/storage";
 import { configureSMB } from "@/services/smb";
 import { configureTFTP } from "@/services/tftp";
 import { Command, CommanderError } from "commander";
@@ -41,8 +41,8 @@ async function start() {
   await configureDHCP(configuration);
   await configureTFTP(configuration);
   await configureSMB(configuration);
-  await configureLVM(configuration);
-  await configureLIO(configuration);
+  await configureStorage(configuration);
+  await configureiSCSI(configuration);
 
   const response = await startServices();
 
@@ -62,18 +62,5 @@ serviceCLI
   .command("restart")
   .description("Restart Lanboot services.")
   .action(start);
-
-serviceCLI
-  .command("install")
-  .description("Install Lanboot services.")
-  .action(async () => {
-    const response = await installServices();
-
-    if (!response.ok) {
-      throw new ServiceError(response.stderr.trim());
-    }
-
-    console.log(response.stdout.trim());
-  });
 
 export { serviceCLI };

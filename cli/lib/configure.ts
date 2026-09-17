@@ -52,9 +52,9 @@ const defaultConfiguration: LanbootConfiguration = {
       },
     ],
   },
-  lvm: {
-    volumeGroup: "lanboot",
-    physicalDevices: ["/dev/sdb"],
+  storage: {
+    pool: "lanboot",
+    devices: ["/dev/sdb"],
   },
   image: {
     iqnPrefix: "iqn.2026-09.wawads.dev",
