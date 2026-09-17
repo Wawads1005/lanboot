@@ -62,6 +62,22 @@ const LVMConfigurationSchema = z.object({
 
 type LVMConfiguration = z.infer<typeof LVMConfigurationSchema>;
 
+const iSCSIConfigurationSchema = z.object({
+  address: z.string().min(1, { error: "iSCSI address is required" }),
+  port: z.number().min(1, { error: "iSCSI port is required" }),
+});
+
+type iSCSIConfiguration = z.infer<typeof iSCSIConfigurationSchema>;
+
+const ImageConfigurationSchema = z.object({
+  master: z.string().min(1, { error: "Image master is required" }),
+  masterUpdate: z.string().min(1, { error: "Image master update is required" }),
+  iqnPrefix: z.string().min(1, { error: "Image iqn prefix is required" }),
+  masterSize: z.string().min(1, { error: "Image size is required" }),
+});
+
+type ImageConfiguration = z.infer<typeof ImageConfigurationSchema>;
+
 const LanbootConfigurationSchema = z.object({
   network: NetworkConfigurationSchema,
   dhcp: DHCPConfigurationSchema,
@@ -69,6 +85,8 @@ const LanbootConfigurationSchema = z.object({
   http: HTTPConfigurationSchema,
   smb: SMBConfigurationSchema,
   lvm: LVMConfigurationSchema,
+  iscsi: iSCSIConfigurationSchema,
+  image: ImageConfigurationSchema,
 });
 
 type LanbootConfiguration = z.infer<typeof LanbootConfigurationSchema>;
@@ -82,6 +100,8 @@ export type {
   SMBShareConfiguration,
   TFTPConfiguration,
   LVMConfiguration,
+  iSCSIConfiguration,
+  ImageConfiguration,
 };
 
 export {
@@ -93,4 +113,6 @@ export {
   SMBShareConfigurationSchema,
   TFTPConfigurationSchema,
   LVMConfigurationSchema,
+  iSCSIConfigurationSchema,
+  ImageConfigurationSchema,
 };

@@ -34,7 +34,7 @@ const defaultConfiguration: LanbootConfiguration = {
     shares: [
       {
         name: "shared",
-        path: "/srv/samba/shared",
+        path: "/srv/smb/shared",
         browseable: true,
         readOnly: false,
         guestOK: true,
@@ -43,7 +43,7 @@ const defaultConfiguration: LanbootConfiguration = {
       },
       {
         name: "installation",
-        path: "/srv/samba/installation",
+        path: "/srv/smb/installation",
         browseable: true,
         readOnly: false,
         guestOK: true,
@@ -54,7 +54,17 @@ const defaultConfiguration: LanbootConfiguration = {
   },
   lvm: {
     volumeGroup: "lanboot",
-    physicalDevices: ["/dev/sdb1"],
+    physicalDevices: ["/dev/sdb"],
+  },
+  image: {
+    iqnPrefix: "iqn.2026-09.wawads.dev",
+    master: "master",
+    masterUpdate: "master-update",
+    masterSize: "100G",
+  },
+  iscsi: {
+    address: "192.168.100.243",
+    port: 3260,
   },
 };
 

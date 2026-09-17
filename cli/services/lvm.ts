@@ -12,8 +12,8 @@ async function configureLVM(configuration: LanbootConfiguration) {
   if (!response.ok) {
     const devices = lvm.physicalDevices.join(" ");
 
-    await $`pvcreate ${devices}`;
-    await $`vgcreate ${lvm.volumeGroup} ${devices}`;
+    await $`pvcreate ${devices} --yes`;
+    await $`vgcreate ${lvm.volumeGroup} ${devices} --yes`;
   }
 }
 

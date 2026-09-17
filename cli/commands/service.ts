@@ -6,6 +6,7 @@ import {
 import { LanbootConfigurationSchema } from "@/schemas/lanboot";
 import { configureDHCP } from "@/services/dhcp";
 import { installServices, startServices } from "@/services/internal";
+import { configureLIO } from "@/services/lio";
 import { configureLVM } from "@/services/lvm";
 import { configureSMB } from "@/services/smb";
 import { configureTFTP } from "@/services/tftp";
@@ -41,6 +42,7 @@ async function start() {
   await configureTFTP(configuration);
   await configureSMB(configuration);
   await configureLVM(configuration);
+  await configureLIO(configuration);
 
   const response = await startServices();
 
