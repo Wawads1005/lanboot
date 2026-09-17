@@ -1,6 +1,11 @@
-import { getConfiguration } from "@/lib/configure";
+import {
+  defaultConfiguration,
+  getConfiguration,
+  setConfiguration,
+} from "@/lib/configure";
 import { LanbootConfigurationSchema } from "@/schemas/lanboot";
 import { configureDHCP } from "@/services/dhcp";
+import { installServices, startServices } from "@/services/internal";
 import { configureSMB } from "@/services/smb";
 import { configureTFTP } from "@/services/tftp";
 import { Command, CommanderError } from "commander";
@@ -13,37 +18,51 @@ class ServiceError extends CommanderError {
   }
 }
 
-serviceCLI.description("Lanboot service management");
+serviceCLI.description("Lanboot service management.");
 
-serviceCLI.command("configure").action(async () => {
-  const foundConfiguration = await getConfiguration();
+serviceCLI
+  .command("start")
+  .description("Start Lanboot services.")
+  .action(async () => {
+    const configuration =
+      (await getConfiguration()) ??
+      (await setConfiguration(defaultConfiguration), defaultConfiguration);
 
-  if (!foundConfiguration) {
-    throw new ServiceError("Lanboot configuration doesn't exists.");
-  }
+    const configurationResult =
+      LanbootConfigurationSchema.safeParse(configuration);
 
-  const configurationResult =
-    LanbootConfigurationSchema.safeParse(foundConfiguration);
+    if (!configurationResult.success) {
+      throw new ServiceError(
+        configurationResult.error.issues[0]
+          ? configurationResult.error.issues[0].message
+          : configurationResult.error.message,
+      );
+    }
 
-  if (!configurationResult.success) {
-    throw new ServiceError(
-      configurationResult.error.issues[0]
-        ? configurationResult.error.issues[0].message
-        : configurationResult.error.message,
-    );
-  }
+    await configureDHCP(configuration);
+    await configureTFTP(configuration);
+    await configureSMB(configuration);
 
-  console.log("Configuring DHCP server...");
-  await configureDHCP(configurationResult.data);
-  console.log("Successfully configured DHCP server.");
+    const response = await startServices();
 
-  console.log("Configuring TFTP server...");
-  await configureTFTP(configurationResult.data);
-  console.log("Successfully configured TFTP server.");
+    if (!response.ok) {
+      throw new ServiceError(response.stderr.trim());
+    }
 
-  console.log("Configuring SMB server...");
-  await configureSMB(configurationResult.data);
-  console.log("Successfully configured SMB server.");
-});
+    console.log("Lanboot started.");
+  });
+
+serviceCLI
+  .command("install")
+  .description("Install Lanboot services.")
+  .action(async () => {
+    const response = await installServices();
+
+    if (!response.ok) {
+      throw new ServiceError(response.stderr.trim());
+    }
+
+    console.log(response.stdout.trim());
+  });
 
 export { serviceCLI };

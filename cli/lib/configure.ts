@@ -3,6 +3,57 @@ import toml, { stringify, TomlError } from "smol-toml";
 import { CONFIG_FILEPATH } from "@/constants/config";
 import { LanbootConfiguration } from "@/schemas/lanboot";
 
+const defaultConfiguration: LanbootConfiguration = {
+  network: {
+    interface: "enp3s0",
+    address: "192.168.100.243",
+    netmask: "255.255.255.0",
+  },
+
+  dhcp: {
+    rangeStart: "192.168.100.1",
+    rangeEnd: "192.168.100.254",
+    proxy: true,
+  },
+
+  tftp: {
+    enable: true,
+    root: "/srv/tftp",
+  },
+
+  http: {
+    enable: true,
+    root: "/var/www/html",
+  },
+
+  smb: {
+    workgroup: "WORKGROUP",
+    serverString: "Lanboot",
+    serverRole: "standalone",
+    mapToGuest: "bad user",
+    shares: [
+      {
+        name: "shared",
+        path: "/srv/samba/shared",
+        browseable: true,
+        readOnly: false,
+        guestOK: true,
+        createMask: "0755",
+        directoryMask: "0755",
+      },
+      {
+        name: "installation",
+        path: "/srv/samba/installation",
+        browseable: true,
+        readOnly: false,
+        guestOK: true,
+        createMask: "0755",
+        directoryMask: "0755",
+      },
+    ],
+  },
+};
+
 async function getHasConfiguration() {
   try {
     await fsPromises.access(CONFIG_FILEPATH, fsPromises.constants.F_OK);
@@ -44,4 +95,4 @@ async function setConfiguration(configuration: LanbootConfiguration) {
   await fsPromises.writeFile(CONFIG_FILEPATH, configurationToml);
 }
 
-export { getConfiguration, setConfiguration };
+export { getConfiguration, setConfiguration, defaultConfiguration };
