@@ -1,5 +1,5 @@
 import fsPromises from "node:fs/promises";
-import toml, { stringify, TomlError } from "smol-toml";
+import toml from "smol-toml";
 import { CONFIG_FILEPATH } from "@/constants/config";
 import { LanbootConfiguration } from "@/schemas/lanboot";
 
@@ -52,6 +52,10 @@ const defaultConfiguration: LanbootConfiguration = {
       },
     ],
   },
+  lvm: {
+    volumeGroup: "lanboot",
+    physicalDevices: ["/dev/sdb1"],
+  },
 };
 
 async function getHasConfiguration() {
@@ -81,7 +85,7 @@ async function getConfiguration() {
 
     return configuration;
   } catch (error) {
-    if (error instanceof TomlError) {
+    if (error instanceof toml.TomlError) {
       console.error(`config: ${error.message}`);
     }
 
@@ -90,7 +94,7 @@ async function getConfiguration() {
 }
 
 async function setConfiguration(configuration: LanbootConfiguration) {
-  const configurationToml = stringify(configuration);
+  const configurationToml = toml.stringify(configuration);
 
   await fsPromises.writeFile(CONFIG_FILEPATH, configurationToml);
 }

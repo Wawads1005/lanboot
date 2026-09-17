@@ -53,12 +53,22 @@ const SMBConfigurationSchema = z.object({
 
 type SMBConfiguration = z.infer<typeof SMBConfigurationSchema>;
 
+const LVMConfigurationSchema = z.object({
+  volumeGroup: z.string().min(1, { error: "LVM volume group is required" }),
+  physicalDevices: z
+    .array(z.string())
+    .min(1, { error: "LVM physical devices must have atleast one device." }),
+});
+
+type LVMConfiguration = z.infer<typeof LVMConfigurationSchema>;
+
 const LanbootConfigurationSchema = z.object({
   network: NetworkConfigurationSchema,
   dhcp: DHCPConfigurationSchema,
   tftp: TFTPConfigurationSchema,
   http: HTTPConfigurationSchema,
   smb: SMBConfigurationSchema,
+  lvm: LVMConfigurationSchema,
 });
 
 type LanbootConfiguration = z.infer<typeof LanbootConfigurationSchema>;
@@ -71,6 +81,7 @@ export type {
   SMBConfiguration,
   SMBShareConfiguration,
   TFTPConfiguration,
+  LVMConfiguration,
 };
 
 export {
@@ -81,4 +92,5 @@ export {
   SMBConfigurationSchema,
   SMBShareConfigurationSchema,
   TFTPConfigurationSchema,
+  LVMConfigurationSchema,
 };

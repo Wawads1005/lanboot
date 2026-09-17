@@ -4,7 +4,7 @@ $.shell = "/usr/bin/bash";
 $.nothrow = true;
 
 async function installServices() {
-  const response = await $`apt-get install dnsmasq nginx samba -y`;
+  const response = await $`apt-get install dnsmasq nginx samba lvm2 -y`;
 
   return response;
 }
