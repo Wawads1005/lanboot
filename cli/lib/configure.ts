@@ -63,7 +63,6 @@ const defaultConfiguration: LanbootConfiguration = {
     masterSize: "100G",
   },
   iscsi: {
-    address: "192.168.100.243",
     port: 3260,
   },
 };

@@ -5,7 +5,7 @@ $.shell = "/usr/bin/bash";
 $.nothrow = true;
 
 async function configureLIO(configuration: LanbootConfiguration) {
-  const { lvm, iscsi, image } = configuration;
+  const { network, lvm, iscsi, image } = configuration;
 
   const volumeGroup = `/dev/${lvm.volumeGroup}`;
   const masterLV = `${volumeGroup}/${image.master}`;
@@ -43,8 +43,8 @@ async function configureLIO(configuration: LanbootConfiguration) {
 
   const portals = await $`targetcli /iscsi/${masterIqn}/tpg1/portals ls`;
 
-  if (!portals.stdout.includes(`${iscsi.address}:${iscsi.port}`)) {
-    await $`targetcli /iscsi/${masterIqn}/tpg1/portals create ${iscsi.address} ${iscsi.port}`;
+  if (!portals.stdout.includes(`${network.address}:${iscsi.port}`)) {
+    await $`targetcli /iscsi/${masterIqn}/tpg1/portals create ${network.address} ${iscsi.port}`;
   }
 
   await $`targetcli /iscsi/${masterIqn}/tpg1 set attribute authentication=0 demo_mode_write_protect=0 generate_node_acls=1`;

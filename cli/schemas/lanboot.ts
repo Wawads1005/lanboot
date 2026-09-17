@@ -63,7 +63,6 @@ const LVMConfigurationSchema = z.object({
 type LVMConfiguration = z.infer<typeof LVMConfigurationSchema>;
 
 const iSCSIConfigurationSchema = z.object({
-  address: z.string().min(1, { error: "iSCSI address is required" }),
   port: z.number().min(1, { error: "iSCSI port is required" }),
 });
 
