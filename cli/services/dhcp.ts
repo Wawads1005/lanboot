@@ -8,7 +8,8 @@ async function configureDHCP(configuration: LanbootConfiguration) {
   const dhcpConfiguration = [
     `interface=${network.interface}`,
     "bind-interfaces",
-    `dhcp-range=${dhcp.rangeStart},${dhcp.proxy ? "proxy" : dhcp.rangeEnd}, ${network.netmask}`,
+    "port=0",
+    `dhcp-range=${dhcp.rangeStart},${dhcp.proxy ? "proxy" : dhcp.rangeEnd},${network.netmask}`,
     "# Detect CPU architecture",
     "dhcp-match=set:bios,option:client-arch,0",
     "dhcp-match=set:efi_x86-64,option:client-arch,7",
@@ -20,7 +21,10 @@ async function configureDHCP(configuration: LanbootConfiguration) {
     `dhcp-boot=tag:!ipxeclient,tag:bios,${dhcp.biosBootfile}`,
     `dhcp-boot=tag:!ipxeclient,tag:efi_x86-64,${dhcp.uefiBootfile}`,
 
-    `dhcp-boot=tag:ipxeclient,http://${http.root}/${dhcp.ipxeBootfile}`,
+    `pxe-service=tag:!ipxeclient,x86PC,"iPXE (Bios)",${dhcp.biosBootfile}`,
+    `pxe-service=tag:!ipxeclient,x86-64_EFI,"iPXE (UEFI)",${dhcp.uefiBootfile}`,
+
+    `dhcp-boot=tag:ipxeclient,http://${network.address}/${dhcp.ipxeBootfile}`,
   ];
 
   const ipxeBoot = [
