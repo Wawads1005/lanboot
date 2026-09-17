@@ -14,6 +14,10 @@ const defaultConfiguration: LanbootConfiguration = {
     rangeStart: "192.168.100.1",
     rangeEnd: "192.168.100.254",
     proxy: true,
+
+    uefiBootfile: "ipxe.efi",
+    biosBootfile: "undionly.kpxe",
+    ipxeBootfile: "boot.ipxe",
   },
 
   tftp: {
@@ -61,6 +65,7 @@ const defaultConfiguration: LanbootConfiguration = {
     master: "master",
     masterUpdate: "master-update",
     masterSize: "100G",
+    masterArchitecture: "bios",
   },
   iscsi: {
     port: 3260,

@@ -12,6 +12,10 @@ const DHCPConfigurationSchema = z.object({
   rangeStart: z.string().min(1, { error: "DHCP range start is required" }),
   rangeEnd: z.string().min(1, { error: "DHCP range end is required" }),
   proxy: z.boolean(),
+
+  biosBootfile: z.string().min(1, { error: "DHCP bios bootfile is required" }),
+  ipxeBootfile: z.string().min(1, { error: "DHCP ipxe bootfile is required" }),
+  uefiBootfile: z.string().min(1, { error: "DHCP uefi bootfile is required" }),
 });
 
 type DHCPConfiguration = z.infer<typeof DHCPConfigurationSchema>;
@@ -71,8 +75,9 @@ type iSCSIConfiguration = z.infer<typeof iSCSIConfigurationSchema>;
 const ImageConfigurationSchema = z.object({
   master: z.string().min(1, { error: "Image master is required" }),
   masterUpdate: z.string().min(1, { error: "Image master update is required" }),
-  iqnPrefix: z.string().min(1, { error: "Image iqn prefix is required" }),
   masterSize: z.string().min(1, { error: "Image size is required" }),
+  masterArchitecture: z.enum(["bios", "efi_x86-64"]),
+  iqnPrefix: z.string().min(1, { error: "Image iqn prefix is required" }),
 });
 
 type ImageConfiguration = z.infer<typeof ImageConfigurationSchema>;

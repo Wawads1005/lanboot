@@ -19,6 +19,11 @@ async function installServices() {
 async function uninstallServices() {
   const configuration = await getConfiguration();
 
+  await $`targetcli clearconfig true`;
+  await $`rm -rf ${CONFIG_FILEPATH}`;
+  await $`rm -rf ${DNSMASQ_D_DIRECTORY}/lanboot-*`;
+  await $`rm -rf ${SAMBA_CONFIGURATION_DIRECTORY}`;
+
   if (configuration) {
     const masterPath = `/dev/${configuration.storage.pool}/${configuration.image.master}`;
 
@@ -38,10 +43,6 @@ async function uninstallServices() {
   await $`apt-get remove dnsmasq-base -y`;
   await $`apt-get purge -y`;
   await $`apt-get auto-remove -y`;
-  await $`rm -rf ${CONFIG_FILEPATH}`;
-  await $`rm -rf ${DNSMASQ_D_DIRECTORY}/lanboot-*`;
-  await $`rm -rf ${SAMBA_CONFIGURATION_DIRECTORY}`;
-  await $`targetcli clearconfig true`;
 }
 
 async function startServices() {
@@ -268,7 +269,7 @@ interface GetStoragetTargetLunInput {
 
 async function getStorageTargetLun(input: GetStoragetTargetLunInput) {
   const response =
-    await $`targetcli /iscsi/${input.wwn}/tpg1/luns ls ${input.lun}`;
+    await $`targetcli /iscsi/${input.wwn}/tpg1/luns ls lun${input.lun}`;
 
   return response;
 }
@@ -316,7 +317,7 @@ async function setStorageTargetAttribute(
   input: SetStoragetTargetAttributeInput,
 ) {
   const response =
-    await $`targetcli /iscsi/${input.wwn}/tpg1 set attribute ${input.attribute} ${input.value}`;
+    await $`targetcli /iscsi/${input.wwn}/tpg1 set attribute ${input.attribute}=${input.value}`;
 
   return response;
 }

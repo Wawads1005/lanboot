@@ -1,5 +1,4 @@
 import { LanbootConfiguration } from "@/schemas/lanboot";
-import { $ } from "zx";
 import {
   createStorageBackstores,
   createStorageBlock,
@@ -12,9 +11,6 @@ import {
   getStoragetTargetAttribute,
   setStorageTargetAttribute,
 } from "@/services/internal";
-
-$.shell = "/usr/bin/bash";
-$.nothrow = true;
 
 async function configureiSCSI(configuration: LanbootConfiguration) {
   const { storage: storageConfig, image: imageConfig } = configuration;
@@ -76,7 +72,7 @@ async function configureiSCSI(configuration: LanbootConfiguration) {
     attribute: "authentication",
   });
 
-  if (parseInt(authentication.stdout.trim(), 10) === 0) {
+  if (parseInt(authentication.stdout.trim().split("=").pop()!, 10) === 1) {
     await setStorageTargetAttribute({
       wwn: masterIqn,
       attribute: "authentication",
@@ -89,7 +85,9 @@ async function configureiSCSI(configuration: LanbootConfiguration) {
     attribute: "demo_mode_write_protect",
   });
 
-  if (parseInt(demoModeWriteProtect.stdout.trim(), 10) === 0) {
+  if (
+    parseInt(demoModeWriteProtect.stdout.trim().split("=").pop()!, 10) === 1
+  ) {
     await setStorageTargetAttribute({
       wwn: masterIqn,
       attribute: "demo_mode_write_protect",
@@ -102,7 +100,9 @@ async function configureiSCSI(configuration: LanbootConfiguration) {
     attribute: "prod_mode_write_protect",
   });
 
-  if (parseInt(prodModeWriteProtect.stdout.trim(), 10) === 0) {
+  if (
+    parseInt(prodModeWriteProtect.stdout.trim().split("=").pop()!, 10) === 1
+  ) {
     await setStorageTargetAttribute({
       wwn: masterIqn,
       attribute: "prod_mode_write_protect",
@@ -115,7 +115,7 @@ async function configureiSCSI(configuration: LanbootConfiguration) {
     attribute: "generate_node_acls",
   });
 
-  if (parseInt(generateNodeACLS.stdout.trim(), 10) === 0) {
+  if (parseInt(generateNodeACLS.stdout.trim().split("=").pop()!, 10) === 0) {
     await setStorageTargetAttribute({
       wwn: masterIqn,
       attribute: "generate_node_acls",
