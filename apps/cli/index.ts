@@ -186,8 +186,8 @@ lanboot
       );
     }
 
-    await $`systemctl stop ${services}`;
-    await $`systemctl disable ${services}`;
+    await $`systemctl start ${services}`;
+    await $`systemctl enable ${services}`;
   });
 
 async function main() {
