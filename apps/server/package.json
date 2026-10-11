@@ -23,5 +23,9 @@
     "@lanboot/validators": "workspace:*",
     "express": "^5.2.1",
     "zx": "catalog:"
-  }
+  },
+  "files": [
+    "build",
+    "public"
+  ]
 }

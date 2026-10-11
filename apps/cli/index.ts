@@ -2,7 +2,11 @@ import fsPromises from "node:fs/promises";
 import { checkbox, confirm, input, number, select } from "@inquirer/prompts";
 import { Command } from "commander";
 import { configInput, type ConfigInput } from "@lanboot/validators";
-import { CONFIG_FILEPATH } from "@/constants/config";
+import {
+  CONFIG_FILEPATH,
+  SERVER_DIRECTORY,
+  SERVER_FILEPATH,
+} from "@/constants";
 import {
   detectBlockdevices,
   detectInterfaceInfo,
@@ -28,6 +32,42 @@ lanboot
     await $`systemctl disable ${services}`;
 
     await loadModules();
+
+    const system: Array<string | undefined> = [
+      "[Unit]",
+      "Description=Lanboot - Diskless boot server",
+      `After=network-online.target sys-kernel-config.mount ${services.join(" ")}`,
+      `Wants=network-online.target ${services.join(" ")}`,
+      undefined,
+      "[Service]",
+      "Type=simple",
+      `ExecStart=${process.execPath} ${SERVER_FILEPATH}`,
+      undefined,
+      "[Install]",
+      "WantedBy=multi-user.target",
+    ];
+    const result = await $`systemctl cat lanboot.service`.nothrow();
+
+    if (result.ok) {
+      await $`systemctl stop lanboot.service`;
+      await $`systemctl disable lanboot.service`;
+    }
+
+    try {
+      await fsPromises.rm(SERVER_DIRECTORY, { recursive: true });
+    } catch (error) {
+      /**Best effort */
+    }
+
+    await $`NODE_ENV=production pnpm -F @lanboot/server build`;
+    await $`pnpm -F @lanboot/server deploy --prod ${SERVER_DIRECTORY}`;
+
+    await fsPromises.writeFile(
+      "/etc/systemd/system/lanboot.service",
+      system.join("\n"),
+    );
+
+    await $`systemctl daemon-reload`;
   });
 
 lanboot
@@ -49,7 +89,7 @@ lanboot
 
     const apiStaticPath = await input({
       message: "Enter your API Static Path:",
-      default: "/var/lib/lanboot/public",
+      default: "public",
       required: true,
     });
 
