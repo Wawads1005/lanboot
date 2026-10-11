@@ -230,6 +230,14 @@ lanboot
     await $`systemctl enable ${[...services, `${SERVICE_NAME}.service`]}`;
   });
 
+lanboot
+  .command("stop")
+  .description("stop lanboot")
+  .action(async () => {
+    await $`systemctl stop ${[...services, `${SERVICE_NAME}.service`]}`;
+    await $`systemctl disable ${[...services, `${SERVICE_NAME}.service`]}`;
+  });
+
 async function main() {
   try {
     if (process.argv.length === 2) {
