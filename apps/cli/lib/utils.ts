@@ -29,39 +29,40 @@ interface Blockdevice {
   type: string;
   model: string;
   path: string;
+  pkname?: string;
+  mountpoints: (string | null)[];
+  children?: Blockdevice[];
 }
 
 interface BlockResponse {
   blockdevices: Blockdevice[];
 }
 
-interface FileSystem {
-  target: string;
-  source: string;
-}
-
-interface FileSystemResponse {
-  filesystems: FileSystem[];
-}
-
 async function detectBlockdevices() {
   const { blockdevices } =
-    await $`lsblk -e 7,11,252 -o name,size,type,model,path -d -J`.json<BlockResponse>();
+    await $`lsblk -e 7,11,252 -o name,size,type,model,path,pkname,mountpoints -J`.json<BlockResponse>();
 
-  const { filesystems } =
-    await $`findmnt / -o target,source -J`.json<FileSystemResponse>();
+  const rootDevices = new Set<string>();
 
-  const rootFS = filesystems.at(0);
+  const getRootDevices = (devices: Blockdevice[]) => {
+    for (const device of devices) {
+      if (device.mountpoints?.includes("/")) {
+        rootDevices.add(
+          device.type === "disk" ? device.path : `/dev/${device.pkname}`,
+        );
+      }
 
-  if (!rootFS) {
-    throw new Error("Couldn't identify root fs");
-  }
+      if (device.children) {
+        getRootDevices(device.children);
+      }
+    }
+  };
 
-  const devices = blockdevices.filter(
-    (blockdevice) => !rootFS.source.includes(blockdevice.name),
+  getRootDevices(blockdevices);
+
+  return blockdevices.filter(
+    (device) => device.type === "disk" && !rootDevices.has(device.path),
   );
-
-  return devices;
 }
 
 export { detectInterfaces, detectInterfaceInfo, detectBlockdevices };
