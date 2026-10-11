@@ -21,14 +21,13 @@ lanboot
   .description("install dependencies")
   .action(async () => {
     console.log(`Installing dependencies...`);
-
     await $`apt-get install ${packages} -y`;
+    console.log(`Successfully installed dependencies...`);
+
     await $`systemctl stop ${services}`;
     await $`systemctl disable ${services}`;
 
     await loadModules();
-
-    console.log(`Successfully installed dependencies...`);
   });
 
 lanboot
