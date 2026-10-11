@@ -1,0 +1,27 @@
+{
+  "name": "@lanboot/server",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "tsup --onSuccess \"sudo -E node ./\"",
+    "build": "tsup",
+    "start": "sudo node --env-file=/etc/lanboot.conf ./"
+  },
+  "type": "module",
+  "main": "./build/index.js",
+  "devDependencies": {
+    "@lanboot/tsup": "workspace:*",
+    "@lanboot/typescript": "workspace:*",
+    "@types/express": "^5.0.6",
+    "@types/node": "catalog:",
+    "tsup": "catalog:",
+    "typescript": "catalog:"
+  },
+  "dependencies": {
+    "@lanboot/ipxe": "workspace:*",
+    "@lanboot/lio": "workspace:*",
+    "@lanboot/storage": "workspace:*",
+    "@lanboot/validators": "workspace:*",
+    "express": "^5.2.1",
+    "zx": "catalog:"
+  }
+}

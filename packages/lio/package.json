@@ -1,0 +1,19 @@
+{
+  "name": "@lanboot/lio",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "tsup",
+    "build": "tsup"
+  },
+  "type": "module",
+  "types": "./build/index.d.ts",
+  "main": "./build/index.js",
+  "module": "./build/index.js",
+  "devDependencies": {
+    "@lanboot/tsup": "workspace:*",
+    "@lanboot/typescript": "workspace:*",
+    "@types/node": "catalog:",
+    "tsup": "catalog:",
+    "typescript": "catalog:"
+  }
+}

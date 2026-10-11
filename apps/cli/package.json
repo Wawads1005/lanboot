@@ -1,0 +1,26 @@
+{
+  "name": "@lanboot/cli",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "tsup",
+    "build": "tsup"
+  },
+  "type": "module",
+  "devDependencies": {
+    "@lanboot/tsup": "workspace:*",
+    "@lanboot/typescript": "workspace:*",
+    "@types/node": "catalog:",
+    "tsup": "catalog:",
+    "typescript": "catalog:"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "^8.7.3",
+    "@lanboot/cli": "link:",
+    "@lanboot/ipxe": "workspace:*",
+    "@lanboot/storage": "workspace:*",
+    "@lanboot/validators": "workspace:*",
+    "commander": "^15.0.0",
+    "lanboot": "link:../..",
+    "zx": "catalog:"
+  }
+}

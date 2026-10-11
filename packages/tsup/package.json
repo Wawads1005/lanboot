@@ -1,0 +1,17 @@
+{
+  "name": "@lanboot/tsup",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@lanboot/typescript": "workspace:*",
+    "@types/node": "catalog:",
+    "tsup": "catalog:",
+    "typescript": "catalog:"
+  },
+  "exports": {
+    "./base": "./base.ts",
+    "./node": "./node.ts",
+    "./package": "./package.ts"
+  }
+}

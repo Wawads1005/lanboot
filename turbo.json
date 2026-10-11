@@ -1,0 +1,17 @@
+{
+  "$schema": "https://turborepo.dev/schema.json",
+  "ui": "tui",
+  "globalEnv": ["NODE_ENV"],
+  "tasks": {
+    "dev": {
+      "env": ["NETWORK_*", "API_*", "STORAGE_*", "BOOT_*", "TFTP_*"],
+      "cache": false,
+      "persistent": true,
+      "interactive": true
+    },
+    "build": {
+      "cache": true,
+      "outputs": ["^build"]
+    }
+  }
+}

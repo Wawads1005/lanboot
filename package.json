@@ -1,0 +1,22 @@
+{
+  "name": "lanboot",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "dotenv -e .env.local -- turbo dev",
+    "build": "NODE_ENV=production turbo build"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.10.1",
+      "onFail": "download"
+    }
+  },
+  "packageManager": "pnpm@12.10.1",
+  "type": "module",
+  "devDependencies": {
+    "concurrently": "catalog:",
+    "dotenv-cli": "^11.0.0",
+    "turbo": "^2.11.7"
+  }
+}
