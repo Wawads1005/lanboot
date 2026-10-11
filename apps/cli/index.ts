@@ -42,6 +42,7 @@ lanboot
       `Wants=network-online.target ${services.join(" ")}`,
       undefined,
       "[Service]",
+      `EnvironmentFile=${CONFIG_FILEPATH}`,
       "Type=simple",
       `ExecStart=${process.execPath} ${SERVER_FILEPATH}`,
       undefined,
@@ -224,8 +225,6 @@ lanboot
           : parseResult.error.message,
       );
     }
-
-    $.verbose = true;
 
     await $`systemctl start ${[...services, `${SERVICE_NAME}.service`]}`;
     await $`systemctl enable ${[...services, `${SERVICE_NAME}.service`]}`;
