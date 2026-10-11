@@ -44,6 +44,7 @@ lanboot
       `Wants=network-online.target ${services.join(" ")}`,
       undefined,
       "[Service]",
+      `WorkingDirectory=${SERVER_DIRECTORY}`,
       `EnvironmentFile=${CONFIG_FILEPATH}`,
       "Type=simple",
       `ExecStart=${process.execPath} ${SERVER_FILEPATH}`,
@@ -51,6 +52,7 @@ lanboot
       "[Install]",
       "WantedBy=multi-user.target",
     ];
+
     const result = await $`systemctl cat lanboot.service`.nothrow();
 
     if (result.ok) {
