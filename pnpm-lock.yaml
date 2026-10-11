@@ -203,9 +203,6 @@ importers:
       '@inquirer/prompts':
         specifier: ^8.7.3
         version: 8.7.3(@types/node@26.6.5)
-      '@lanboot/cli':
-        specifier: 'link:'
-        version: 'link:'
       '@lanboot/ipxe':
         specifier: workspace:*
         version: link:../../packages/ipxe
@@ -218,9 +215,6 @@ importers:
       commander:
         specifier: ^15.0.0
         version: 15.0.0
-      lanboot:
-        specifier: link:../..
-        version: link:../..
       zx:
         specifier: 'catalog:'
         version: 8.8.5

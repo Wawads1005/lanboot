@@ -5,6 +5,9 @@
     "dev": "tsup",
     "build": "tsup"
   },
+  "bin": {
+    "lanboot": "./build/lanboot.js"
+  },
   "type": "module",
   "devDependencies": {
     "@lanboot/tsup": "workspace:*",
@@ -15,12 +18,10 @@
   },
   "dependencies": {
     "@inquirer/prompts": "^8.7.3",
-    "@lanboot/cli": "link:",
     "@lanboot/ipxe": "workspace:*",
     "@lanboot/storage": "workspace:*",
     "@lanboot/validators": "workspace:*",
     "commander": "^15.0.0",
-    "lanboot": "link:../..",
     "zx": "catalog:"
   }
 }
