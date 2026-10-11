@@ -1,4 +1,5 @@
 import fsPromises from "node:fs/promises";
+import { $ } from "zx";
 import { checkbox, confirm, input, number, select } from "@inquirer/prompts";
 import { Command } from "commander";
 import { configInput, type ConfigInput } from "@lanboot/validators";
@@ -16,7 +17,8 @@ import {
 } from "@/lib/utils";
 import { dependencies } from "@/lib/dependencies";
 import { loadModules } from "@/lib/modules";
-import { $ } from "zx";
+import { loadConfiguration } from "@/lib/configuration";
+import { generator } from "@/commands/generator";
 
 const lanboot = new Command("lanboot");
 const packages = dependencies.flatMap((dependency) => dependency.package);
@@ -206,25 +208,7 @@ lanboot
   .command("start")
   .description("start lanboot")
   .action(async () => {
-    try {
-      process.loadEnvFile(CONFIG_FILEPATH);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-        throw new Error("Missing configuration file");
-      }
-
-      throw error;
-    }
-
-    const parseResult = await configInput.safeParseAsync(process.env);
-
-    if (!parseResult.success) {
-      throw new Error(
-        parseResult.error.issues[0]
-          ? parseResult.error.issues[0].message
-          : parseResult.error.message,
-      );
-    }
+    await loadConfiguration();
 
     await $`systemctl start ${[...services, `${SERVICE_NAME}.service`]}`;
     await $`systemctl enable ${[...services, `${SERVICE_NAME}.service`]}`;
@@ -237,6 +221,8 @@ lanboot
     await $`systemctl stop ${[...services, `${SERVICE_NAME}.service`]}`;
     await $`systemctl disable ${[...services, `${SERVICE_NAME}.service`]}`;
   });
+
+lanboot.addCommand(generator);
 
 async function main() {
   try {
