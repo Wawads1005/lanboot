@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "tsup",
-    "build": "tsup"
+    "build": "tsup",
+    "lanboot": "sudo node ./build/lanboot.js"
   },
   "bin": {
     "lanboot": "./build/lanboot.js"

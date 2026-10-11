@@ -6,6 +6,8 @@ import {
   CONFIG_FILEPATH,
   SERVER_DIRECTORY,
   SERVER_FILEPATH,
+  SERVICE_FILEPATH,
+  SERVICE_NAME,
 } from "@/constants";
 import {
   detectBlockdevices,
@@ -62,10 +64,7 @@ lanboot
     await $`NODE_ENV=production pnpm -F @lanboot/server build`;
     await $`pnpm -F @lanboot/server deploy --prod ${SERVER_DIRECTORY}`;
 
-    await fsPromises.writeFile(
-      "/etc/systemd/system/lanboot.service",
-      system.join("\n"),
-    );
+    await fsPromises.writeFile(SERVICE_FILEPATH, system.join("\n"));
 
     await $`systemctl daemon-reload`;
   });
@@ -226,12 +225,19 @@ lanboot
       );
     }
 
-    await $`systemctl start ${services}`;
-    await $`systemctl enable ${services}`;
+    $.verbose = true;
+
+    await $`systemctl start ${[...services, `${SERVICE_NAME}.service`]}`;
+    await $`systemctl enable ${[...services, `${SERVICE_NAME}.service`]}`;
   });
 
 async function main() {
   try {
+    if (process.argv.length === 2) {
+      lanboot.help();
+      return;
+    }
+
     await lanboot.parseAsync();
   } catch (error) {
     if (error instanceof Error) {
