@@ -320,6 +320,137 @@ Start with one test client before deploying to additional machines.
 
 Successful PXE boot and WinPE loading do not guarantee that Windows will boot successfully from iSCSI. Validate the complete workflow before relying on it.
 
+## API Reference
+
+Lanboot exposes an HTTP endpoint for generating the iPXE boot menu and preparing client-specific iSCSI overlays.
+
+### Base URL
+
+The API uses the port configured by `API_PORT`.
+
+```text
+http://<server-ip>:<api-port>
+```
+
+Replace `<server-ip>` with the Lanboot server's IP address and `<api-port>` with the configured API port.
+
+### Endpoints
+
+| Method | Endpoint    | Description                                                                                   |
+| ------ | ----------- | --------------------------------------------------------------------------------------------- |
+| `GET`  | `/api/boot` | Generates the iPXE boot menu and boot scripts.                                                |
+| `POST` | `/api/boot` | Creates or recreates a client-specific storage overlay and returns an iPXE script to boot it. |
+
+### `GET /api/boot`
+
+Generates an iPXE script containing the Lanboot boot menu.
+
+The menu provides the following options:
+
+- **Install an Operating System** — Opens the operating system installation menu.
+- **Install Windows** — Loads the configured Windows PE environment.
+- **Boot from iSCSI** — Allows booting the master image or a client-specific overlay.
+- **iPXE Shell** — Opens the iPXE shell.
+- **Poweroff** — Powers off the client.
+
+The generated script configures the next-server address and preserves the SAN connection setting.
+
+#### Windows PE boot
+
+The Windows 10 boot option loads the following files from the API's static file server:
+
+```text
+/windows/winpe/wimboot
+/windows/winpe/boot/BCD
+/windows/winpe/boot/boot.sdi
+/windows/winpe/sources/boot.wim
+```
+
+Ensure these files exist under the configured static directory.
+
+#### Response
+
+**Success:** `200 OK`
+
+Content type: `text/plain`
+
+The response body contains the generated iPXE script.
+
+### `POST /api/boot`
+
+Creates a client-specific writable overlay based on the configured master storage image, configures an iSCSI target for that overlay, and returns an iPXE script to boot the client.
+
+#### Request body
+
+The request must contain a JSON object with a `macAddress` field.
+
+```json
+{
+  "macAddress": "a1b2c3d4e5f6"
+}
+```
+
+The value must satisfy the validation rules defined by `createOverlayInput` in `@lanboot/validators`. Refer to that schema for the exact accepted format.
+
+#### Processing
+
+The handler performs the following operations:
+
+1. Validates the request body.
+2. Checks whether an iSCSI target already exists for the specified MAC address.
+3. Rejects the request if the existing target has active sessions.
+4. Removes the existing target, block backstore, and logical volume when present and eligible for removal.
+5. Creates a writable overlay based on the configured master image.
+6. Creates an LIO block backstore and iSCSI target.
+7. Configures the target portal and target portal group attributes.
+8. Generates an iPXE script that hooks the overlay as a SAN device and boots from it.
+
+**Important:** This endpoint can delete and recreate existing overlay storage. Do not issue requests for clients with data that must be preserved. An existing target with active iSCSI sessions cannot be recreated.
+
+#### Response
+
+**Success:** `200 OK`
+
+Content type: `text/plain`
+
+The response body contains an iPXE script that connects to the newly configured iSCSI target and boots from it.
+
+### Error responses
+
+Errors are returned as plain-text iPXE scripts that display a Lanboot error message.
+
+| Status                      | Condition                                                              |
+| --------------------------- | ---------------------------------------------------------------------- |
+| `500 Internal Server Error` | An error occurs while validating the request or preparing the overlay. |
+| `404 Not Found`             | An unsupported HTTP method is used for the boot endpoint.              |
+
+The current handler returns `500` for validation errors and other caught exceptions. Error responses contain an iPXE `echo` command with the error name and message.
+
+### Example request
+
+Request a client-specific overlay using `curl`:
+
+```bash
+curl -X POST \
+  http://192.168.100.243:8080/api/boot \
+  -H "Content-Type: application/json" \
+  -d '{ "macAddress": "a1b2c3d4e5f6" }'
+```
+
+The response should contain an iPXE script if the overlay is created successfully. This operation modifies server storage and should be tested with a disposable client overlay.
+
+### Static file serving
+
+The API also serves static files from the directory configured by `API_STATIC_PATH`. These files are served separately from the `/api/boot` handler.
+
+For example, with `API_PORT=8080`, a file at `public/windows/winpe/wimboot` can be requested at:
+
+```text
+http://192.168.100.243:8080/windows/winpe/wimboot
+```
+
+The actual URL depends on the configured static directory and server setup.
+
 ## CLI Reference
 
 The current CLI provides these commands:
