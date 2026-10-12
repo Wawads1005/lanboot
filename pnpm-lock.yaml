@@ -206,6 +206,9 @@ importers:
       '@lanboot/ipxe':
         specifier: workspace:*
         version: link:../../packages/ipxe
+      '@lanboot/lio':
+        specifier: workspace:*
+        version: link:../../packages/lio
       '@lanboot/storage':
         specifier: workspace:*
         version: link:../../packages/storage

@@ -20,6 +20,7 @@
   "dependencies": {
     "@inquirer/prompts": "^8.7.3",
     "@lanboot/ipxe": "workspace:*",
+    "@lanboot/lio": "workspace:*",
     "@lanboot/storage": "workspace:*",
     "@lanboot/validators": "workspace:*",
     "commander": "^15.0.0",

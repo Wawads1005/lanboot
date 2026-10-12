@@ -3,6 +3,7 @@ import path from "node:path";
 import type { ConfigInput } from "@lanboot/validators";
 import { storage } from "@lanboot/storage";
 import { $ } from "zx";
+import lio from "@/lib/lio";
 
 interface Dependency {
   package: string;
@@ -124,18 +125,68 @@ const dependencies: Dependency[] = [
         });
       }
 
-      const foundMaster = await storage.block.findOne(
+      let foundMaster = await storage.block.findOne(
         config.STORAGE_POOL,
         "master",
       );
 
       if (!foundMaster) {
-        await storage.block.create({
+        foundMaster = await storage.block.create({
           name: "master",
           pool: config.STORAGE_POOL,
           size: config.STORAGE_MASTER_SIZE,
         });
       }
+
+      let foundMasterBackstoresBlock = await lio.backstores.block.get({
+        name: config.STORAGE_MASTER,
+      });
+
+      if (!foundMasterBackstoresBlock) {
+        foundMasterBackstoresBlock = await lio.backstores.block.create({
+          dev: `/dev/${config.STORAGE_POOL}/${config.STORAGE_MASTER}`,
+          name: config.STORAGE_MASTER,
+          readOnly: false,
+        });
+      }
+
+      let foundMasterIscsi = await lio.iscsi.get({
+        wwn: `iqn.2026-10.lanboot.local:${config.STORAGE_MASTER}`,
+      });
+
+      if (!foundMasterIscsi) {
+        foundMasterIscsi = await lio.iscsi.create({
+          wwn: `iqn.2026-10.lanboot.local:${config.STORAGE_MASTER}`,
+        });
+      }
+
+      let tpg1 = await foundMasterIscsi.tpg.get(1);
+
+      if (!tpg1) {
+        tpg1 = await foundMasterIscsi.tpg.create(1, { enable: false });
+      }
+
+      await tpg1.attrib.update({
+        authentication: false,
+        demo_mode_write_protect: false,
+        prod_mode_write_protect: false,
+        generate_node_acls: true,
+        cache_dynamic_acls: true,
+      });
+
+      let lun0 = await tpg1.lun.get(0);
+
+      if (!lun0) {
+        lun0 = await tpg1.lun.create(0, foundMasterBackstoresBlock);
+      }
+
+      let portal = await tpg1.portal.get();
+
+      if (!portal) {
+        portal = await tpg1.portal.create();
+      }
+
+      await tpg1.enable();
     },
   },
 ];
