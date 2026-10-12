@@ -154,7 +154,7 @@ async function bootHandler(req: e.Request, res: e.Response) {
           return;
         }
 
-        const message = "Unexpected error occurred upon getting boot entries.";
+        const message = "Unexpected error occurred upon booting.";
 
         sendResponse(res, new Error(message));
       }
@@ -167,7 +167,7 @@ async function bootHandler(req: e.Request, res: e.Response) {
         if (!parseInput.success) {
           const message = parseInput.error.issues
             .map((issue) => issue.message)
-            .join(" ");
+            .join(",");
 
           throw new Error(message);
         }

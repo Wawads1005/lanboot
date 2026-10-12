@@ -26,9 +26,17 @@ async function getBootEntries(staticPath: string) {
       ),
     );
 
-    const parsedData = await bootEntry.parseAsync(metadata);
+    const parseResult = await bootEntry.safeParseAsync(metadata);
 
-    bootEntries.push(parsedData);
+    if (!parseResult.success) {
+      const message = parseResult.error.issues
+        .map((issue) => issue.message)
+        .join(" ");
+
+      throw new Error(message);
+    }
+
+    bootEntries.push(parseResult.data);
   }
 
   return bootEntries;
