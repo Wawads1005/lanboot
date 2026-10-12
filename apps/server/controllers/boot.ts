@@ -1,3 +1,4 @@
+import { getBootEntries } from "@/lib/boot";
 import config from "@/lib/config";
 import { interpolate, iPXE, metaKey } from "@lanboot/ipxe";
 import { LIO } from "@lanboot/lio";
@@ -21,111 +22,142 @@ function sendResponse(res: e.Response, data: Error | iPXE, status = 500) {
 
 async function bootHandler(req: e.Request, res: e.Response) {
   const method = req.method.toLowerCase();
-  const httpURL = interpolate`http://${"next-server"}:${config.api.port}`;
+  const serverURL = interpolate`http://${"next-server"}:${config.api.port}`;
 
   switch (method) {
     case "get": {
-      const ipxe = new iPXE();
+      try {
+        const ipxe = new iPXE();
+        const bootEntries = await getBootEntries(config.api.staticPath);
 
-      ipxe.ifconf();
-      ipxe.set("next-server", config.network.address);
-      ipxe.set("keep-san", 1);
-
-      ipxe
-        .prompt(
-          { key: metaKey.f12, timeout: 5000 },
-          "Press F12 to open Lanboot Menu",
-        )
-        .then((ipxe) => ipxe.goto("start"))
-        .catch((ipxe) => ipxe.goto("overlay"));
-
-      ipxe.label("start", (ipxe) => {
-        ipxe.menu(undefined, "Lanboot - Menu");
-        ipxe.item(
-          { key: "i", gap: true },
-          "install",
-          "Install an Operating System",
-        );
-        ipxe.item({ key: "b", gap: true }, "boot", "Boot from iSCSI");
-        ipxe.item({ key: metaKey.ctrlB, gap: true }, "shell", "iPXE Shell");
-        ipxe.item({ key: "p", gap: true }, "poweroff", "Poweroff");
+        ipxe.ifconf();
+        ipxe.set("next-server", config.network.address);
+        ipxe.set("keep-san", 1);
 
         ipxe
-          .choose({ default: "boot", timeout: 3000 }, "operation")
-          .then((ipxe) => ipxe.goto("${operation}"))
-          .catch((ipxe) => ipxe.goto("shell"));
-      });
+          .prompt(
+            { key: metaKey.f12, timeout: 5000 },
+            "Press F12 to open Lanboot Menu",
+          )
+          .then((ipxe) => ipxe.goto("start"))
+          .catch((ipxe) => ipxe.goto("overlay"));
 
-      ipxe.label("install", (ipxe) => {
-        ipxe.menu(undefined, "Lanboot - Install an Operating System");
-        ipxe.item({ key: "w", gap: true }, "windows", "Install Windows");
-        ipxe.item({ key: "b", gap: true }, "start", "Go Back");
+        ipxe.label("start", (ipxe) => {
+          ipxe.menu(undefined, "Lanboot - Menu");
+          ipxe.item({ key: "b" }, "boot", "Boot");
+          ipxe.item({ key: metaKey.ctrlB }, "shell", "iPXE Shell");
+          ipxe.item({ key: "p" }, "poweroff", "Poweroff");
 
-        ipxe
-          .choose(undefined, "operating_system")
-          .then((ipxe) => ipxe.goto("${operating_system}"))
-          .catch((ipxe) => ipxe.goto("install"));
-      });
+          ipxe
+            .choose({ default: "boot", timeout: 3000 }, "operation")
+            .then((ipxe) => ipxe.goto("${operation}"))
+            .catch((ipxe) => ipxe.goto("shell"));
+        });
 
-      ipxe.label("windows", (ipxe) => {
-        ipxe.menu(undefined, "Lanboot - Install Windows");
-        ipxe.item({ key: "0", gap: true }, "windows_10", "Windows 10");
-        ipxe.item({ key: "b", gap: true }, "install", "Go Back");
+        ipxe.label("boot", (ipxe) => {
+          ipxe.menu(undefined, "Lanboot - Boot");
+          ipxe.item({ key: "e" }, "entry", "Entry");
+          ipxe.item({ key: "i" }, "iscsi", "iSCSI");
+          ipxe.item({ key: "b" }, "start", "Go Back");
 
-        ipxe
-          .choose(undefined, "windows_version")
-          .then((ipxe) => ipxe.goto("${windows_version}"))
-          .catch((ipxe) => ipxe.goto("windows"));
-      });
+          ipxe
+            .choose(undefined, "target")
+            .then((ipxe) => ipxe.goto("${target}"))
+            .catch((ipxe) => ipxe.goto("boot"));
+        });
 
-      ipxe.label("windows_10", (ipxe) => {
-        ipxe.sanhook(
-          { drive: "0x80" },
-          interpolate`iscsi:${"next-server"}::::${config.lio.iscsi.prefix}:master`,
-        );
+        ipxe.label("entry", (ipxe) => {
+          ipxe.menu(undefined, "Lanboot - Boot an Entry");
 
-        ipxe.imgload(
-          undefined,
-          `${httpURL}/windows/winpe/wimboot`,
-          "index=1",
-          "gui",
-        );
-        ipxe.imgfetch(undefined, `${httpURL}/windows/winpe/boot/BCD`);
-        ipxe.imgfetch(undefined, `${httpURL}/windows/winpe/boot/boot.sdi`);
-        ipxe.imgfetch(undefined, `${httpURL}/windows/winpe/sources/boot.wim`);
+          for (const bootEntry of bootEntries) {
+            ipxe.item(undefined, bootEntry.id, bootEntry.name);
+          }
 
-        ipxe.imgexec();
-      });
+          ipxe.item({ key: "b" }, "boot", "Go Back");
+          ipxe
+            .choose(undefined, "entry")
+            .then((ipxe) => ipxe.goto("${entry}"))
+            .catch((ipxe) => ipxe.goto("entry"));
+        });
 
-      ipxe.label("boot", (ipxe) => {
-        ipxe.menu(undefined, "Lanboot - Boot from iSCSI");
-        ipxe.item({ key: "m", gap: true }, "master", "Master");
-        ipxe.item({ key: "o", gap: true }, "overlay", "Overlay");
-        ipxe.item({ key: "b", gap: true }, "start", "Go Back");
+        for (const bootEntry of bootEntries) {
+          ipxe.label(bootEntry.id, (ipxe) => {
+            ipxe.set("next-server", config.network.address);
+            ipxe.set("keep-san", 1);
 
-        ipxe
-          .choose({ default: "overlay", timeout: 2000 }, "image")
-          .then((ipxe) => ipxe.goto("${image}"))
-          .catch((ipxe) => ipxe.goto("boot"));
-      });
+            const masterIscsi = interpolate`iscsi:${"next-server"}::::${config.lio.iscsi.prefix}:${config.storage.master.name}`;
 
-      ipxe.label("master", (ipxe) => {
-        ipxe.sanhook(
-          { drive: "0x80" },
-          interpolate`iscsi:${"next-server"}::::${config.lio.iscsi.prefix}:master`,
-        );
+            ipxe.sanhook({ drive: "0x80" }, masterIscsi);
 
-        ipxe.sanboot({ drive: "0x80" });
-      });
+            const entryURL = `${serverURL}/${bootEntry.id}`;
+            const kernelURL = `${entryURL}/${bootEntry.kernel.path}`;
 
-      ipxe.label("overlay", (ipxe) => {
-        ipxe.params({ method: "POST" });
-        ipxe.param(undefined, "macAddress", interpolate`${"mac"}`);
+            ipxe.imgload(
+              { name: bootEntry.kernel.name },
+              kernelURL,
+              ...bootEntry.kernel.args,
+            );
 
-        ipxe.imgexec(undefined, `${httpURL}/api/boot##params`);
-      });
+            for (const image of bootEntry.images) {
+              const imageURL = `${entryURL}/${image.path}`;
 
-      sendResponse(res, ipxe);
+              ipxe.imgfetch({ name: image.name }, imageURL, ...image.args);
+            }
+            ipxe.imgexec();
+          });
+        }
+
+        ipxe.label("iscsi", (ipxe) => {
+          ipxe.menu(undefined, "Lanboot - iSCSI");
+          ipxe.item({ key: "m" }, "master", "Master");
+          ipxe.item({ key: "o" }, "overlay", "Overlay");
+          ipxe.item({ key: "b" }, "boot", "Go Back");
+
+          ipxe
+            .choose(undefined, "target")
+            .then((ipxe) => ipxe.goto("${target}"))
+            .catch((ipxe) => ipxe.goto("iscsi"));
+        });
+
+        ipxe.label("master", (ipxe) => {
+          ipxe.sanhook(
+            { drive: "0x80" },
+            interpolate`iscsi:${"next-server"}::::${config.lio.iscsi.prefix}:${config.storage.master.name}`,
+          );
+
+          ipxe.sanboot({ drive: "0x80" });
+        });
+
+        ipxe.label("overlay", (ipxe) => {
+          ipxe.params({ method: "POST" });
+          ipxe.param(undefined, "macAddress", interpolate`${"mac"}`);
+
+          ipxe.imgexec(undefined, `${serverURL}/api/boot##params`);
+        });
+
+        ipxe.label("shell", (ipxe) => {
+          ipxe.echo(undefined, "Lanboot - iPXE Shell");
+
+          ipxe.shell();
+        });
+
+        ipxe.label("poweroff", (ipxe) => {
+          ipxe.echo(undefined, "shutting down...");
+
+          ipxe.poweroff();
+        });
+
+        sendResponse(res, ipxe);
+      } catch (error) {
+        if (error instanceof Error) {
+          sendResponse(res, error);
+          return;
+        }
+
+        const message = "Unexpected error occurred upon getting boot entries.";
+
+        sendResponse(res, new Error(message));
+      }
       break;
     }
     case "post": {

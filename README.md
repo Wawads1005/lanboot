@@ -2,46 +2,50 @@
 
 **Open-source diskless boot infrastructure for Windows clients.**
 
-Lanboot is a Linux-based diskless boot server designed to help you deploy and boot Windows clients over a local network. It aims to provide an open-source alternative to commercial diskless solutions commonly used in internet cafés and shared-computer environments.
+Lanboot is a Linux-based diskless boot server designed to boot Windows clients over a local network. It aims to provide an open-source alternative to commercial diskless solutions commonly used in internet cafés and shared-computer environments.
 
-Lanboot combines network booting, centralized storage, and Windows deployment into a single project. It uses PXE/iPXE to boot clients, WinPE to prepare Windows installations, and iSCSI to provide remote storage to diskless machines.
+Lanboot combines PXE/iPXE network booting, centralized storage, Windows deployment, and iSCSI boot infrastructure.
 
 **Status: Prototype.** Lanboot is under active development and is not yet recommended for production deployments without thorough testing.
 
 ## Features
 
-- **PXE/iPXE booting** — Boot clients over the local network using a custom iPXE script.
-- **Windows PE deployment** — Boot into WinPE to install and prepare Windows.
-- **Centralized storage** — Manage storage resources using Linux storage tools.
-- **iSCSI boot infrastructure** — Provide remote block storage to Windows clients.
-- **Service configuration** — Configure the required system services through the Lanboot CLI.
-- **Automated setup** — Build and deploy the server and configure its dependencies.
+- **PXE/iPXE booting** — Boot clients over the local network.
+- **Dynamic boot entries** — Generate the boot menu from discovered boot entries instead of relying on a hardcoded operating-system menu.
+- **Windows PE deployment** — Load WinPE to install and prepare Windows.
+- **Centralized storage** — Manage master images and client overlays using LVM.
+- **iSCSI boot infrastructure** — Export master images and client-specific overlays to diskless clients.
+- **Service configuration** — Configure required system services through the Lanboot CLI.
+- **Automated setup** — Install dependencies, deploy the server, and configure its services.
 
-Features and compatibility are evolving. Some workflows still require manual configuration.
+Some workflows still require manual configuration. Boot-entry creation and asset management are not yet exposed through dedicated API endpoints.
 
 ## Architecture
 
 Lanboot orchestrates existing Linux services and boot technologies rather than implementing every component itself.
 
-| Component         | Purpose                                               |
-| ----------------- | ----------------------------------------------------- |
-| dnsmasq           | DHCP/PXE boot configuration and TFTP services         |
-| iPXE              | Network bootloader and boot script execution          |
-| Node.js API       | Serves boot scripts and static boot assets            |
-| WinPE and wimboot | Loads the Windows preinstallation environment         |
-| Samba (SMB)       | Provides network access to Windows installation media |
-| LVM               | Manages storage volumes                               |
-| Linux LIO/iSCSI   | Exposes storage to diskless clients                   |
-| systemd           | Manages Lanboot and its configured services           |
+| Component         | Purpose                                              |
+| ----------------- | ---------------------------------------------------- |
+| dnsmasq           | DHCP/PXE boot configuration and TFTP services        |
+| iPXE              | Network bootloader and boot script execution         |
+| Node.js API       | Generates boot scripts and serves static boot assets |
+| WinPE and wimboot | Load the Windows preinstallation environment         |
+| Samba (SMB)       | Provide network access to Windows installation media |
+| LVM               | Manage master volumes and client overlays            |
+| Linux LIO/iSCSI   | Export remote block storage to clients               |
+| systemd           | Manage Lanboot and its configured services           |
 
-The intended workflow is:
+### Boot workflow
 
-1. A client obtains network configuration and discovers its network boot program.
-2. The client loads the Lanboot iPXE binary through TFTP.
+1. The client obtains network configuration and discovers its network boot program.
+2. The client downloads the iPXE binary through TFTP.
 3. iPXE requests the boot script from the Lanboot API over HTTP.
-4. The user selects a boot option, such as WinPE.
-5. WinPE loads and can access Windows installation media over the network.
-6. Once the Windows master image and client storage are prepared, the client can boot Windows from its configured iSCSI target.
+4. Lanboot generates a menu from the available boot entries and iSCSI options.
+5. When a boot entry is selected, iPXE hooks the configured master iSCSI disk and loads the entry's kernel and image files.
+6. For Windows installation, WinPE accesses the Windows installation media separately, such as through SMB or USB.
+7. After Windows has been installed and the master image is bootable, clients can boot from their respective iSCSI overlays.
+
+The master image is the base for client overlays. A client overlay is recreated from the master when requested, provided an existing target has no active iSCSI sessions. **Recreating an overlay discards changes stored in that overlay.**
 
 ## Requirements
 
@@ -68,11 +72,11 @@ See Microsoft's [Windows ADK installation guide](https://learn.microsoft.com/en-
 - Legacy BIOS support for the BIOS boot flow documented below.
 - Compatible network and storage drivers for the intended Windows installation.
 
-The current Quick Start documents the Legacy BIOS workflow. UEFI is not enabled in the current CLI configuration wizard.
+The current Quick Start documents the Legacy BIOS workflow. UEFI configuration is not enabled in the current CLI configuration wizard.
 
 ## Quick Start
 
-This guide covers building Lanboot, configuring the server, preparing iPXE and WinPE, and booting a client into WinPE.
+This guide covers building Lanboot, configuring the server, preparing iPXE and WinPE, and booting a client.
 
 ### 1. Clone and build Lanboot
 
@@ -90,9 +94,9 @@ pnpm run build
 pnpm -F @lanboot/cli lanboot install
 ```
 
-The installer installs system dependencies, configures the required kernel modules, builds and deploys the server, and generates the systemd service.
+The installer installs system dependencies, configures required kernel modules, builds and deploys the server, and generates the systemd service.
 
-**Warning:** The installer removes and recreates the deployed server directory at `/opt/lanboot/server`. Run it before copying your WinPE files into that directory. If you reinstall later, back up your assets and restore them afterward.
+**Warning:** The installer removes and recreates the deployed server directory at `/opt/lanboot/server`. Run it before copying boot assets into that directory. Back up and restore your assets if you reinstall later.
 
 ### 3. Configure Lanboot
 
@@ -122,12 +126,10 @@ Choose values appropriate for your server.
 
 - Select the interface clients will use to reach Lanboot.
 - Select only storage devices you intend Lanboot to manage.
-- Ensure sufficient storage capacity for the master image and overlays.
+- Ensure the storage pool has sufficient capacity for the master image and client overlays.
 - Choose the firmware mode supported by your clients.
 
 Review the selected storage devices carefully. Storage operations can affect existing data.
-
-The configuration wizard also configures the required dependencies. Review the generated configuration and confirm that it matches your network.
 
 ### 4. Generate the iPXE script
 
@@ -135,13 +137,13 @@ The configuration wizard also configures the required dependencies. Review the g
 pnpm -F @lanboot/cli lanboot generate ipxe
 ```
 
-This generates `lanboot.ipxe` in the CLI package directory:
+This generates the embedded iPXE script:
 
 ```text
 apps/cli/lanboot.ipxe
 ```
 
-The generated script sets the `next-server` address and loads the boot script from the Lanboot API.
+The script sets up the initial network boot flow and requests the dynamically generated boot menu from the Lanboot API.
 
 Review the generated file before building the bootloader.
 
@@ -154,17 +156,31 @@ git clone https://github.com/ipxe/ipxe.git
 cd ipxe/src
 ```
 
-Build a BIOS network boot program with the generated Lanboot script embedded:
+#### Enable request parameter commands
+
+Lanboot uses the iPXE `params` and `param` commands to send the client's MAC address to the overlay endpoint using an HTTP POST request. These commands require the `PARAM_CMD` build option.
+
+Edit `config/general.h` and enable `PARAM_CMD` alongside the other command definitions:
+
+```c
+#define PARAM_CMD /* Request parameter commands */
+```
+
+If `PARAM_CMD` is already enabled, no change is necessary.
+
+#### Build the BIOS bootloader
+
+Build the BIOS network boot program with the generated Lanboot script embedded:
 
 ```bash
 make bin/undionly.kpxe EMBED=../../apps/cli/lanboot.ipxe
 ```
 
-The relative path above assumes that you cloned iPXE into the Lanboot repository root and generated the script using the command in Step 4.
+The relative path assumes that you cloned iPXE into the Lanboot repository root and generated the script in Step 4.
 
-Embedding the script makes the iPXE binary automatically execute the configured Lanboot boot flow.
+Embedding the script makes iPXE execute the configured Lanboot boot flow automatically.
 
-For details, see the [official iPXE embedded scripts documentation](https://ipxe.org/embed).
+For details, see the [official iPXE embedded scripts documentation](https://ipxe.org/embed) and the [PARAM_CMD build option](https://ipxe.org/buildcfg/param_cmd).
 
 Copy the binary into the configured TFTP root. With the example settings `BOOT_FILENAME=lanboot.kpxe` and `TFTP_ROOT=/srv/tftp`:
 
@@ -174,7 +190,7 @@ sudo install -D bin/undionly.kpxe /srv/tftp/lanboot.kpxe
 
 Run this command from `ipxe/src`. If you changed the configured filename or TFTP root, adjust the destination accordingly.
 
-### 6. Prepare WinPE boot files
+### 6. Prepare WinPE
 
 WinPE provides the environment used to install and prepare Windows.
 
@@ -182,75 +198,131 @@ On your Windows technician machine, install the Windows ADK and the matching Win
 
 The required files are:
 
+- `wimboot`
 - `BCD`
 - `boot.sdi`
 - `boot.wim`
-- `wimboot`
 
-With `API_STATIC_PATH=public`, the expected deployed directory structure is:
+The current Windows boot-entry example uses the ID `winpe`. With `API_STATIC_PATH=public`, place the files under the corresponding entry directory:
 
 ```text
 /opt/lanboot/server/public/
-└── windows/
-    └── winpe/
-        ├── boot/
-        │   ├── BCD
-        │   └── boot.sdi
-        ├── sources/
-        │   └── boot.wim
-        └── wimboot
+└── winpe/
+    ├── wimboot
+    ├── bcd
+    ├── boot.sdi
+    └── boot.wim
 ```
 
-Create the directories on the server:
+The paths and filenames above match the current example boot entry. If your boot-entry definition uses different paths, the on-disk files must match it.
+
+Create the directory:
 
 ```bash
-sudo mkdir -p /opt/lanboot/server/public/windows/winpe/boot
-sudo mkdir -p /opt/lanboot/server/public/windows/winpe/sources
+sudo mkdir -p /opt/lanboot/server/public/winpe
 ```
 
-From PowerShell on the technician machine, copy the files to the server. Replace the example username and IP address as necessary:
+From PowerShell on the technician machine, copy the files to the server. Replace the example username, IP address, and source paths as necessary:
 
 ```powershell
-scp C:\WinPE\amd64\media\boot\BCD wawads@192.168.100.243:/opt/lanboot/server/public/windows/winpe/boot/
+scp C:\WinPE\amd64\media\boot\BCD wawads@192.168.100.243:/opt/lanboot/server/public/winpe/bcd
 
-scp C:\WinPE\amd64\media\boot\boot.sdi wawads@192.168.100.243:/opt/lanboot/server/public/windows/winpe/boot/
+scp C:\WinPE\amd64\media\boot\boot.sdi wawads@192.168.100.243:/opt/lanboot/server/public/winpe/boot.sdi
 
-scp C:\WinPE\amd64\media\sources\boot.wim wawads@192.168.100.243:/opt/lanboot/server/public/windows/winpe/sources/
+scp C:\WinPE\amd64\media\sources\boot.wim wawads@192.168.100.243:/opt/lanboot/server/public/winpe/boot.wim
 ```
 
-Download `wimboot` from the [official iPXE wimboot page](https://ipxe.org/wimboot) and copy it into the WinPE directory:
+Download `wimboot` from the [official iPXE wimboot page](https://ipxe.org/wimboot) and copy it into the entry directory:
 
 ```bash
-sudo cp ~/Downloads/wimboot /opt/lanboot/server/public/windows/winpe/wimboot
+sudo cp ~/Downloads/wimboot /opt/lanboot/server/public/winpe/wimboot
 ```
 
 Ensure the Lanboot service can read all four files.
 
-The `public` path is resolved relative to the deployed server directory because the generated systemd service sets its working directory to `/opt/lanboot/server`. You can also configure an absolute static path.
+The static path is resolved relative to the deployed server directory because the generated systemd service uses `/opt/lanboot/server` as its working directory. An absolute static path can also be configured.
 
-**Important:** The on-disk directory structure must match the URLs requested by the generated iPXE script. Verify those URLs if your configuration or directory layout differs from this example.
+### 7. Configure a boot entry
 
-### 7. Start Lanboot
+Lanboot discovers boot entries and uses them to generate the boot menu. Each entry has a stable ID, a display name, a kernel definition, and a list of images to load.
+
+A Windows PE entry conceptually contains:
+
+```json
+{
+  "id": "winpe",
+  "name": "Windows Preinstallation Environment",
+  "kernel": {
+    "name": "wimboot",
+    "path": "wimboot",
+    "args": ["index=1", "gui"]
+  },
+  "images": [
+    {
+      "name": "BCD",
+      "path": "bcd",
+      "args": ["BCD"]
+    },
+    {
+      "name": "boot.sdi",
+      "path": "boot.sdi",
+      "args": ["boot.sdi"]
+    },
+    {
+      "name": "boot.wim",
+      "path": "boot.wim",
+      "args": ["boot.wim"]
+    }
+  ],
+  "version": 1
+}
+```
+
+This illustrates the entry's data model; use the metadata format and discovery mechanism implemented by the current `getBootEntries` function.
+
+- `id` identifies the entry and its static asset directory.
+- `name` is displayed in the boot menu.
+- `kernel.name` is the name passed to iPXE's image-loading command.
+- `kernel.path` identifies the actual file to download.
+- `images` lists the additional files required by the boot program.
+- `args` supplies the arguments or filenames passed to iPXE.
+- `version` identifies the boot-entry schema version.
+
+The boot-entry creation and upload workflow is currently manual. A dedicated CLI command or API endpoint for creating entries and uploading their assets has not yet been implemented.
+
+### 8. Start Lanboot
 
 ```bash
 pnpm -F @lanboot/cli lanboot start
 ```
 
-This loads the configuration, starts the configured dependencies and Lanboot service, and enables the services to start automatically at boot.
+This starts Lanboot and its configured services.
 
-Check that the services are running and that the required files are accessible.
-
-For example, create a temporary file named `test.txt` in the static directory and test it from the server:
+Verify that the services are running and the API can serve static files. Create a temporary test file:
 
 ```bash
-curl http://192.168.100.243:8080/test.txt
+echo "Hello, World!" | sudo tee /opt/lanboot/server/public/greetings.txt > /dev/null
 ```
 
-The expected response is the contents of `test.txt`. Remove the temporary file after testing.
+Request the file through the API's static file server:
 
-### 8. Verify network boot services
+```bash
+curl http://192.168.100.243:8080/greetings.txt
+```
 
-Lanboot uses dnsmasq for its PXE/TFTP boot configuration and serves the next-stage boot script through its HTTP API.
+The expected response is:
+
+```text
+Hello, World!
+```
+
+Remove the temporary file after testing:
+
+```bash
+sudo rm /opt/lanboot/server/public/greetings.txt
+```
+
+### 9. Verify network boot services
 
 Before booting a client, verify:
 
@@ -258,11 +330,11 @@ Before booting a client, verify:
 - The DHCP/PXE configuration points clients to the appropriate boot program.
 - TFTP serves the configured boot filename from the configured root.
 - The HTTP API is reachable from the client network.
-- The WinPE files are available through the API's static server.
+- The boot-entry assets are accessible through the API's static file server.
 
 If your network already has a DHCP server, ensure the PXE setup is compatible with it. Avoid running a competing DHCP server. Use the proxy-DHCP arrangement configured for your environment where appropriate.
 
-### 9. Configure client firmware
+### 10. Configure client firmware
 
 On the client machine:
 
@@ -274,19 +346,21 @@ On the client machine:
 
 The BIOS binary built in Step 5 is not a UEFI bootloader. Use a bootloader that matches the client's firmware mode.
 
-### 10. Boot into WinPE
+### 11. Boot WinPE
 
 Boot the client from the network.
 
 1. Wait for the Lanboot menu to appear.
 2. Press F12 if prompted to open the menu.
-3. Select **Install an Operating System**.
-4. Select **Install Windows**.
-5. Select **Install Windows 10**.
+3. Select **Boot**.
+4. Select **Entry**.
+5. Select **Windows Preinstallation Environment**.
 
-Menu labels depend on the current boot script. The client should load the WinPE image prepared in Step 6.
+The entry hooks the configured master iSCSI disk as a SAN device, loads `wimboot` and its required images, and executes the boot program.
 
-### 11. Install Windows
+Menu options are generated from discovered boot entries, so the available entry names depend on the server's current configuration.
+
+### 12. Install Windows onto the master image
 
 Booting WinPE does not itself install Windows. You must provide Windows installation media separately.
 
@@ -296,25 +370,31 @@ One option is to share the installation files from the server over SMB.
 2. Share the directory using Samba/SMB.
 3. Ensure WinPE can reach the server and access the share.
 4. Connect to the share from WinPE and run Windows Setup.
+5. Select the master iSCSI disk as the installation target.
 
 For example, if the share is `\\192.168.100.243\installation`, connect to it from WinPE and launch `setup.exe` from the installation media.
 
-This example assumes the share already exists and its permissions allow the client to read the files.
+This assumes the share already exists and its permissions allow the client to read the files.
 
-Choose the appropriate installation target for your intended workflow. Installing Windows onto a local disk and installing it onto an iSCSI target are different procedures.
+**Important:** Confirm that Windows Setup is installing to the intended master disk. Changes made to the master affect the base image used by subsequently created overlays.
 
-### 12. Boot diskless clients
+### 13. Verify the master before booting overlays
 
-After Windows has been installed and the master image prepared, configure the clients to boot from Lanboot storage.
+Before using client overlays:
 
-Verify that:
+- Confirm the master image contains a working Windows installation.
+- Verify that the master iSCSI target is accessible and bootable.
+- Confirm that Windows has the necessary network and storage drivers.
+- Test the master boot workflow on compatible hardware.
+- Only then test a client-specific overlay.
 
-- The master image is bootable.
-- The iSCSI target and LUN are configured correctly.
-- The client initiator is authorized to access its target.
-- Windows has the required network and storage drivers.
-- The client overlay is configured correctly.
-- The client's firmware and network adapter are compatible with the boot configuration.
+### 14. Boot diskless clients
+
+Select **Boot → iSCSI → Overlay** from the Lanboot menu.
+
+The client submits its MAC address to `POST /api/boot`. Lanboot creates a writable LVM overlay based on the configured master image, creates the corresponding LIO block backstore and iSCSI target, configures the TPG and LUN, enables the portal, and returns an iPXE script to boot from the overlay.
+
+**Warning:** The current overlay workflow recreates an existing overlay when no active iSCSI sessions are present. This resets the overlay to the master image and discards changes stored in the previous overlay. Do not use it for persistent client data without implementing a persistence strategy.
 
 Start with one test client before deploying to additional machines.
 
@@ -322,7 +402,7 @@ Successful PXE boot and WinPE loading do not guarantee that Windows will boot su
 
 ## API Reference
 
-Lanboot exposes an HTTP endpoint for generating the iPXE boot menu and preparing client-specific iSCSI overlays.
+Lanboot exposes an HTTP endpoint for generating the iPXE boot menu and preparing client-specific iSCSI overlays. It also serves static files from the configured static directory.
 
 ### Base URL
 
@@ -336,37 +416,36 @@ Replace `<server-ip>` with the Lanboot server's IP address and `<api-port>` with
 
 ### Endpoints
 
-| Method | Endpoint    | Description                                                                                   |
-| ------ | ----------- | --------------------------------------------------------------------------------------------- |
-| `GET`  | `/api/boot` | Generates the iPXE boot menu and boot scripts.                                                |
-| `POST` | `/api/boot` | Creates or recreates a client-specific storage overlay and returns an iPXE script to boot it. |
+| Method | Endpoint    | Description                                                                           |
+| ------ | ----------- | ------------------------------------------------------------------------------------- |
+| `GET`  | `/api/boot` | Discovers boot entries and generates the iPXE boot menu and scripts.                  |
+| `POST` | `/api/boot` | Creates or recreates a client-specific overlay and returns an iPXE script to boot it. |
 
 ### `GET /api/boot`
 
-Generates an iPXE script containing the Lanboot boot menu.
+Generates an iPXE script containing the current Lanboot menu and boot-entry labels.
 
-The menu provides the following options:
+The menu includes:
 
-- **Install an Operating System** — Opens the operating system installation menu.
-- **Install Windows** — Loads the configured Windows PE environment.
-- **Boot from iSCSI** — Allows booting the master image or a client-specific overlay.
+- **Boot** — Opens the boot submenu.
+- **Entry** — Lists the discovered boot entries.
+- **iSCSI** — Offers the master and overlay boot options.
 - **iPXE Shell** — Opens the iPXE shell.
 - **Poweroff** — Powers off the client.
 
-The generated script configures the next-server address and preserves the SAN connection setting.
+The menu also uses a timed prompt to open the menu when F12 is pressed, with the default timeout path proceeding to the overlay boot flow.
 
-#### Windows PE boot
+#### Boot-entry execution
 
-The Windows 10 boot option loads the following files from the API's static file server:
+For each discovered boot entry, Lanboot generates a label that:
 
-```text
-/windows/winpe/wimboot
-/windows/winpe/boot/BCD
-/windows/winpe/boot/boot.sdi
-/windows/winpe/sources/boot.wim
-```
+1. Sets the configured next-server address and preserves the SAN connection setting.
+2. Hooks the configured master iSCSI target as drive `0x80`.
+3. Loads the entry's kernel or boot program from its configured path.
+4. Fetches the entry's additional images.
+5. Executes the boot program.
 
-Ensure these files exist under the configured static directory.
+For the Windows PE example, `wimboot` loads the BCD, boot sector disk image, and Windows PE image.
 
 #### Response
 
@@ -378,7 +457,7 @@ The response body contains the generated iPXE script.
 
 ### `POST /api/boot`
 
-Creates a client-specific writable overlay based on the configured master storage image, configures an iSCSI target for that overlay, and returns an iPXE script to boot the client.
+Creates a client-specific writable overlay based on the configured master image, configures an iSCSI target for that overlay, and returns an iPXE script to boot the client.
 
 #### Request body
 
@@ -399,11 +478,14 @@ The handler performs the following operations:
 1. Validates the request body.
 2. Checks whether an iSCSI target already exists for the specified MAC address.
 3. Rejects the request if the existing target has active sessions.
-4. Removes the existing target, block backstore, and logical volume when present and eligible for removal.
-5. Creates a writable overlay based on the configured master image.
-6. Creates an LIO block backstore and iSCSI target.
-7. Configures the target portal and target portal group attributes.
-8. Generates an iPXE script that hooks the overlay as a SAN device and boots from it.
+4. Deletes the existing target, block backstore, and logical volume when present and eligible for removal.
+5. Creates a writable LVM overlay based on the configured master image.
+6. Creates the LIO block backstore and iSCSI target.
+7. Creates TPG 1 in a disabled state.
+8. Creates LUN 0 and links it to the new block backstore.
+9. Configures the TPG attributes and creates the portal.
+10. Enables the TPG.
+11. Generates an iPXE script that hooks the overlay as a SAN device and boots from it.
 
 **Important:** This endpoint can delete and recreate existing overlay storage. Do not issue requests for clients with data that must be preserved. An existing target with active iSCSI sessions cannot be recreated.
 
@@ -419,12 +501,12 @@ The response body contains an iPXE script that connects to the newly configured 
 
 Errors are returned as plain-text iPXE scripts that display a Lanboot error message.
 
-| Status                      | Condition                                                              |
-| --------------------------- | ---------------------------------------------------------------------- |
-| `500 Internal Server Error` | An error occurs while validating the request or preparing the overlay. |
-| `404 Not Found`             | An unsupported HTTP method is used for the boot endpoint.              |
+| Status                      | Condition                                                 |
+| --------------------------- | --------------------------------------------------------- |
+| `500 Internal Server Error` | A validation or processing error occurs.                  |
+| `404 Not Found`             | An unsupported HTTP method is used for the boot endpoint. |
 
-The current handler returns `500` for validation errors and other caught exceptions. Error responses contain an iPXE `echo` command with the error name and message.
+The current handler returns `500` for caught validation errors and other exceptions. Error responses contain an iPXE `echo` command with the error name and message.
 
 ### Example request
 
@@ -441,27 +523,33 @@ The response should contain an iPXE script if the overlay is created successfull
 
 ### Static file serving
 
-The API also serves static files from the directory configured by `API_STATIC_PATH`. These files are served separately from the `/api/boot` handler.
+The API serves files from the directory configured by `API_STATIC_PATH`.
 
-For example, with `API_PORT=8080`, a file at `public/windows/winpe/wimboot` can be requested at:
+For example, with `API_PORT=8080`, `API_STATIC_PATH=public`, and a boot entry whose ID is `winpe`, the file at:
 
 ```text
-http://192.168.100.243:8080/windows/winpe/wimboot
+public/winpe/wimboot
 ```
 
-The actual URL depends on the configured static directory and server setup.
+is available at:
+
+```text
+http://192.168.100.243:8080/winpe/wimboot
+```
+
+The URL depends on the configured static directory, entry ID, and relative asset path.
 
 ## CLI Reference
 
 The current CLI provides these commands:
 
-| Command                 | Description                                          |
-| ----------------------- | ---------------------------------------------------- |
-| `lanboot install`       | Install dependencies and deploy the server           |
-| `lanboot configure`     | Configure Lanboot and its dependencies               |
-| `lanboot start`         | Start and enable Lanboot and its configured services |
-| `lanboot stop`          | Stop and disable Lanboot and its configured services |
-| `lanboot generate ipxe` | Generate the embedded iPXE script                    |
+| Command                 | Description                                           |
+| ----------------------- | ----------------------------------------------------- |
+| `lanboot install`       | Install dependencies and deploy the server.           |
+| `lanboot configure`     | Configure Lanboot and its dependencies.               |
+| `lanboot start`         | Start and enable Lanboot and its configured services. |
+| `lanboot stop`          | Stop and disable Lanboot and its configured services. |
+| `lanboot generate ipxe` | Generate the embedded iPXE script.                    |
 
 When running through the pnpm workspace, use the corresponding command prefix:
 
@@ -477,37 +565,37 @@ Check the network connection, client VLAN, DHCP service, and PXE configuration. 
 
 ### Client cannot download the bootloader
 
-Verify the DHCP/PXE boot filename, the TFTP root, and the presence and permissions of the configured NBP.
+Verify the DHCP/PXE boot filename, TFTP root, and presence and permissions of the configured network boot program.
 
 ### iPXE starts but cannot load the Lanboot menu
 
 Check the embedded `lanboot.ipxe` script, the configured server address and API port, and HTTP connectivity from the client network.
 
+### A boot entry does not appear
+
+Check that the entry is discoverable by the current `getBootEntries` implementation and that its metadata passes validation. Verify that the entry ID and display name are valid.
+
+### A boot entry fails to load
+
+Check that its kernel and image paths match the actual files under the configured static directory. Confirm that the generated iPXE script requests the expected URLs and passes the correct image names and arguments to the boot program.
+
 ### WinPE does not boot
 
-Verify that `BCD`, `boot.sdi`, `boot.wim`, and `wimboot` exist in the expected directories. Check that the generated iPXE script requests the correct URLs and that the BCD paths agree with the files supplied to `wimboot`.
+Verify that `wimboot`, `BCD`, `boot.sdi`, and `boot.wim` exist in the expected locations. Check that the BCD configuration agrees with the files supplied to `wimboot`.
 
 See the [iPXE wimboot architecture notes](https://ipxe.org/appnote/wimboot_architecture) for further diagnostics.
 
-### Windows BSOD: Paging File Configuration
+### An overlay cannot be created
 
-If Windows crashes with a BSOD during diskless boot and the paging-file configuration is suspected, try adjusting the master image from WinPE.
+Check the configured storage pool, master logical volume, available capacity, and LIO configuration. If the target already exists, verify that no active iSCSI sessions are using it.
 
-1. Load the Windows master image from WinPE.
-2. Load the master image's offline Windows registry.
-3. Set the paging-file configuration to an empty string.
-4. Unload the offline registry to save the changes.
-5. Boot the client again.
-
-The exact registry key and value should be verified for the Windows installation being used.
-
-Alternatively, you can configure a RAM disk backed by an iSCSI target on your server to host the paging file. This requires additional manual configuration and is outside the scope of this guide.
+Remember that recreating an overlay resets it to the master image and removes the previous overlay's changes.
 
 ### Windows fails to boot from iSCSI
 
-Check the target, LUN, initiator ACL, boot-critical storage drivers, and network adapter compatibility. A configuration that works on one motherboard may not work on another.
+Check the target, LUN mapping, initiator access, boot-critical storage drivers, and network adapter compatibility. A configuration that works on one motherboard may not work on another.
 
-Start by confirming that the client can reach its iSCSI target and that Windows has the drivers required to access the boot device.
+Confirm that the client can reach its iSCSI target and that Windows has the drivers required to access the boot device.
 
 ## Limitations
 
@@ -515,10 +603,11 @@ Lanboot is a prototype, and its capabilities and compatibility are still evolvin
 
 - The documented Quick Start focuses on Legacy BIOS boot.
 - UEFI configuration is not currently enabled in the CLI wizard.
+- Boot-entry creation and asset uploads still require manual configuration.
 - Windows installation and master-image preparation may require manual steps.
 - Motherboard, network adapter, and Windows driver compatibility can vary.
-- Some storage and client workflows require manual configuration.
-- Production hardening, recovery procedures, and broader hardware testing remain important before deployment in a critical environment.
+- The current overlay workflow recreates eligible overlays instead of preserving their changes.
+- Production hardening, recovery procedures, persistence strategies, and broader hardware testing remain important before deployment in a critical environment.
 
 ## Contributing
 
