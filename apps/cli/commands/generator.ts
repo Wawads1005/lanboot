@@ -1,5 +1,5 @@
 import { loadConfiguration } from "@/lib/configuration";
-import { interpolate, iPXE } from "@lanboot/ipxe/build";
+import { interpolate, iPXE } from "@lanboot/ipxe";
 import { Command } from "commander";
 import path from "node:path";
 import fsPromises from "node:fs/promises";
