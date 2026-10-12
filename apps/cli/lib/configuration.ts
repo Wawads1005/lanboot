@@ -1,5 +1,5 @@
 import { CONFIG_FILEPATH } from "@/constants";
-import { configInput } from "@lanboot/validators/build";
+import { configInput } from "@lanboot/validators";
 
 async function loadConfiguration() {
   try {

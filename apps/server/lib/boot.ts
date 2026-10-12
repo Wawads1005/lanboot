@@ -1,7 +1,7 @@
 import type e from "express";
 import fsPromises from "node:fs/promises";
 import path from "node:path";
-import { iPXE } from "@lanboot/ipxe/build";
+import { iPXE } from "@lanboot/ipxe";
 import { bootEntry, type BootEntry } from "@lanboot/validators";
 
 interface BootErrorOptions extends ErrorOptions {
