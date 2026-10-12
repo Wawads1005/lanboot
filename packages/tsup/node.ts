@@ -8,7 +8,7 @@ const nodeOptions: Options = {
   format: "esm",
   target: "node24",
 
-  noExternal: [/^@lanboot\//],
+  noExternal: process.env.NODE_ENV === "production" ? [/^@lanboot\//] : [],
 };
 
 export default nodeOptions;
