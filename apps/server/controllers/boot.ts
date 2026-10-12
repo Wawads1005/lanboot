@@ -1,24 +1,10 @@
-import { getBootEntries } from "@/lib/boot";
-import config from "@/lib/config";
-import { interpolate, iPXE, metaKey } from "@lanboot/ipxe";
+import type e from "express";
 import { LIO } from "@lanboot/lio";
 import { storage } from "@lanboot/storage";
+import { interpolate, iPXE, metaKey } from "@lanboot/ipxe";
 import { createOverlayInput } from "@lanboot/validators";
-import type e from "express";
-
-function sendResponse(res: e.Response, error: Error, status?: number): void;
-function sendResponse(res: e.Response, ipxe: iPXE): void;
-function sendResponse(res: e.Response, data: Error | iPXE, status = 500) {
-  if (data instanceof iPXE) {
-    res.contentType("text/plain").status(200).send(data.build());
-    return;
-  }
-
-  const ipxe = new iPXE();
-  ipxe.echo(undefined, `Lanboot: ${data.name}: ${data.message}`);
-
-  res.contentType("text/plain").status(status).send(ipxe.build());
-}
+import config from "@/lib/config";
+import { BootError, getBootEntries, sendResponse } from "@/lib/boot";
 
 async function bootHandler(req: e.Request, res: e.Response) {
   const method = req.method.toLowerCase();
@@ -149,6 +135,11 @@ async function bootHandler(req: e.Request, res: e.Response) {
 
         sendResponse(res, ipxe);
       } catch (error) {
+        if (error instanceof BootError) {
+          sendResponse(res, error, error.status);
+          return;
+        }
+
         if (error instanceof Error) {
           sendResponse(res, error);
           return;
@@ -169,7 +160,7 @@ async function bootHandler(req: e.Request, res: e.Response) {
             .map((issue) => issue.message)
             .join(",");
 
-          throw new Error(message);
+          throw new BootError(message, { status: 400 });
         }
 
         const overlayIscsi = `${config.lio.iscsi.prefix}:overlay-${parseInput.data.macAddress}`;
@@ -185,7 +176,7 @@ async function bootHandler(req: e.Request, res: e.Response) {
           const activeSessions = await foundIscsi.session.count();
 
           if (activeSessions > 0) {
-            throw new Error("An active session exists");
+            throw new BootError("An active session exists", { status: 409 });
           }
 
           await lio.iscsi.delete(foundIscsi);
@@ -252,6 +243,11 @@ async function bootHandler(req: e.Request, res: e.Response) {
         sendResponse(res, ipxe);
         break;
       } catch (error) {
+        if (error instanceof BootError) {
+          sendResponse(res, error, error.status);
+          return;
+        }
+
         if (error instanceof Error) {
           sendResponse(res, error);
           break;

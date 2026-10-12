@@ -1,6 +1,35 @@
-import { bootEntry, type BootEntry } from "@lanboot/validators";
+import type e from "express";
 import fsPromises from "node:fs/promises";
 import path from "node:path";
+import { iPXE } from "@lanboot/ipxe/build";
+import { bootEntry, type BootEntry } from "@lanboot/validators";
+
+interface BootErrorOptions extends ErrorOptions {
+  status?: number;
+}
+
+class BootError extends Error {
+  status: number;
+
+  constructor(message: string, options?: BootErrorOptions) {
+    super(message, options);
+    this.status = options?.status ?? 500;
+  }
+}
+
+function sendResponse(res: e.Response, error: Error, status?: number): void;
+function sendResponse(res: e.Response, ipxe: iPXE): void;
+function sendResponse(res: e.Response, data: Error | iPXE, status = 500) {
+  if (data instanceof iPXE) {
+    res.contentType("text/plain").status(200).send(data.build());
+    return;
+  }
+
+  const ipxe = new iPXE();
+  ipxe.echo(undefined, `Lanboot: ${data.name}: ${data.message}`);
+
+  res.contentType("text/plain").status(status).send(ipxe.build());
+}
 
 async function getBootEntries(staticPath: string) {
   const dirents = await fsPromises.readdir(staticPath, { withFileTypes: true });
@@ -33,7 +62,7 @@ async function getBootEntries(staticPath: string) {
         .map((issue) => issue.message)
         .join(",");
 
-      throw new Error(message);
+      throw new BootError(message);
     }
 
     bootEntries.push(parseResult.data);
@@ -42,4 +71,5 @@ async function getBootEntries(staticPath: string) {
   return bootEntries;
 }
 
-export { getBootEntries };
+export type { BootErrorOptions };
+export { BootError, sendResponse, getBootEntries };
