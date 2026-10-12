@@ -31,7 +31,7 @@ async function getBootEntries(staticPath: string) {
     if (!parseResult.success) {
       const message = parseResult.error.issues
         .map((issue) => issue.message)
-        .join(" ");
+        .join(",");
 
       throw new Error(message);
     }
