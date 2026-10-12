@@ -222,25 +222,19 @@ async function bootHandler(req: e.Request, res: e.Response) {
         });
 
         const iscsi = await lio.iscsi.create({ wwn: overlayIscsi });
-        let tpg1 = await iscsi.tpg.get(1);
+        const tpg1 = await iscsi.tpg.create(1, { enable: false });
 
-        if (!tpg1) {
-          tpg1 = await iscsi.tpg.create(1);
-        }
-
-        let lun0 = await tpg1.lun.get(0);
-
-        if (!lun0) {
-          lun0 = await tpg1.lun.create(0, backstoresBlock);
-        }
-
-        await tpg1.attrib.set("authentication", false);
-        await tpg1.attrib.set("demo_mode_write_protect", false);
-        await tpg1.attrib.set("prod_mode_write_protect", false);
-        await tpg1.attrib.set("generate_node_acls", true);
-        await tpg1.attrib.set("cache_dynamic_acls", true);
+        await tpg1.lun.create(0, backstoresBlock);
+        await tpg1.attrib.update({
+          authentication: false,
+          demo_mode_write_protect: false,
+          prod_mode_write_protect: false,
+          generate_node_acls: true,
+          cache_dynamic_acls: true,
+        });
 
         await tpg1.portal.create();
+        await tpg1.enable();
 
         const ipxe = new iPXE();
 
