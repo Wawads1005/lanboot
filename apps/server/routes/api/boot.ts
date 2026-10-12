@@ -1,8 +1,10 @@
-import bootHandler from "@/controllers/boot";
+import { overlayHandler } from "@/controllers/boot/overlay";
+import { scriptHandler } from "@/controllers/boot/script";
 import e from "express";
 
 const bootRouter = e.Router();
 
-bootRouter.use("/", bootHandler);
+bootRouter.get("/", scriptHandler);
+bootRouter.post("/", overlayHandler);
 
 export default bootRouter;
