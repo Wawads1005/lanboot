@@ -47,7 +47,7 @@ const dependencies: Dependency[] = [
         "dhcp-match=set:ipxeclient,175",
         "dhcp-userclass=set:ipxeclient,iPXE",
         undefined,
-        `pxe-service=tag:!ipxeclient,x86PC,${config.BOOT_FILENAME}`,
+        `pxe-service=tag:!ipxeclient,x86PC,"iPXE",${config.BOOT_FILENAME}`,
         undefined,
         "enable-tftp",
         `tftp-root=${config.TFTP_ROOT}`,
