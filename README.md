@@ -158,15 +158,31 @@ cd ipxe/src
 
 #### Enable request parameter commands
 
-Lanboot uses the iPXE `params` and `param` commands to send the client's MAC address to the overlay endpoint using an HTTP POST request. These commands require the `PARAM_CMD` build option.
+Lanboot uses the iPXE `params` and `param` commands to send the client's MAC address to the overlay endpoint through an HTTP POST request.
 
-Edit `config/general.h` and enable `PARAM_CMD` alongside the other command definitions:
+iPXE disables `PARAM_CMD` for BIOS builds by default. To enable it, edit `config/general.h` and locate this section:
 
 ```c
-#define PARAM_CMD /* Request parameter commands */
+/* Disable commands not historically included in BIOS builds */
+#if defined ( PLATFORM_pcbios )
+  #undef CERT_CMD
+  #undef CONSOLE_CMD
+  #undef DIGEST_CMD
+  #undef NTP_CMD
+  #undef PARAM_CMD
+  #undef PCI_CMD
+  #undef USB_CMD
+  #undef VLAN_CMD
+#endif
 ```
 
-If `PARAM_CMD` is already enabled, no change is necessary.
+Remove or comment out the `#undef PARAM_CMD` line:
+
+```c
+/* #undef PARAM_CMD */
+```
+
+This allows `PARAM_CMD` to remain enabled if it is defined elsewhere in the configuration.
 
 #### Build the BIOS bootloader
 
@@ -177,10 +193,6 @@ make bin/undionly.kpxe EMBED=../../apps/cli/lanboot.ipxe
 ```
 
 The relative path assumes that you cloned iPXE into the Lanboot repository root and generated the script in Step 4.
-
-Embedding the script makes iPXE execute the configured Lanboot boot flow automatically.
-
-For details, see the [official iPXE embedded scripts documentation](https://ipxe.org/embed) and the [PARAM_CMD build option](https://ipxe.org/buildcfg/param_cmd).
 
 Copy the binary into the configured TFTP root. With the example settings `BOOT_FILENAME=lanboot.kpxe` and `TFTP_ROOT=/srv/tftp`:
 
