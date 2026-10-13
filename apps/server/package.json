@@ -2,8 +2,8 @@
   "name": "@lanboot/server",
   "version": "1.0.0",
   "scripts": {
-    "dev": "tsup --onSuccess \"sudo -E node ./\"",
-    "build": "tsup",
+    "dev": "tsup --watch --sourcemap --onSuccess \"sudo -E node ./\"",
+    "build": "tsup --minify",
     "start": "sudo node --env-file=/etc/lanboot.conf ./"
   },
   "type": "module",

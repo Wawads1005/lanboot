@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "dotenv -e .env.local -- turbo dev",
-    "build": "NODE_ENV=production turbo build",
+    "build": "turbo build",
     "clean": "find . -type d \\( -name node_modules -o -name build -o -name .turbo \\) -prune -exec rm -rf {} +"
   },
   "devEngines": {

@@ -2,8 +2,8 @@
   "name": "@lanboot/cli",
   "version": "1.0.0",
   "scripts": {
-    "dev": "tsup",
-    "build": "tsup",
+    "dev": "tsup --watch --sourcemap",
+    "build": "tsup --minify",
     "lanboot": "sudo node ./build/lanboot.js"
   },
   "bin": {

@@ -66,7 +66,7 @@ lanboot
       /**Best effort */
     }
 
-    await $`NODE_ENV=production pnpm -F @lanboot/server build`;
+    await $`pnpm -F @lanboot/server build`;
     await $`pnpm -F @lanboot/server deploy --prod ${SERVER_DIRECTORY}`;
 
     await fsPromises.writeFile(SERVICE_FILEPATH, system.join("\n"));
