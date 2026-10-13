@@ -7,7 +7,6 @@ const configInput = z.object({
   NETWORK_ADDRESS: z.ipv4(),
 
   API_PORT: z.number().or(z.string().transform((input) => Number(input))),
-  API_STATIC_PATH: z.string(),
 
   STORAGE_POOL: z.string(),
   STORAGE_MASTER: z.string(),

@@ -91,12 +91,6 @@ lanboot
       required: true,
     });
 
-    const apiStaticPath = await input({
-      message: "Enter your API Static Path:",
-      default: "public",
-      required: true,
-    });
-
     const allBlockdevices = await detectBlockdevices();
 
     const devices = await checkbox({
@@ -156,7 +150,6 @@ lanboot
 
     const config: ConfigInput = {
       API_PORT: apiPort,
-      API_STATIC_PATH: apiStaticPath,
       NETWORK_ADDRESS: networkInterfaceInfo.address,
       NETWORK_INTERFACE: networkInterface,
       BOOT_FIRMWARE: bootFirmware,

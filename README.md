@@ -111,7 +111,6 @@ Example configuration:
 ```text
 ✔ Select a Network Interface: enp3s0
 ✔ Enter your API Port: 8080
-✔ Enter your API Static Path: public
 ✔ Check every blockdevices lanboot is allowed to use: OSC SSD 256GB
 ✔ Enter your Storage Pool: lanboot
 ✔ Enter your Storage Master: master
@@ -215,7 +214,7 @@ The required files are:
 - `boot.sdi`
 - `boot.wim`
 
-The current Windows boot-entry example uses the ID `winpe`. With `API_STATIC_PATH=public`, place the files under the corresponding entry directory:
+The current Windows boot-entry example uses the ID `winpe`, place the files under the corresponding entry directory:
 
 ```text
 /opt/lanboot/server/public/
@@ -535,9 +534,7 @@ The response should contain an iPXE script if the overlay is created successfull
 
 ### Static file serving
 
-The API serves files from the directory configured by `API_STATIC_PATH`.
-
-For example, with `API_PORT=8080`, `API_STATIC_PATH=public`, and a boot entry whose ID is `winpe`, the file at:
+For example, with `API_PORT=8080`, and a boot entry whose ID is `winpe`, the file at:
 
 ```text
 public/winpe/wimboot

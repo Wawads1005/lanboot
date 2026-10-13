@@ -1,12 +1,13 @@
 import e from "express";
 import appRouter from "@/routes";
 import config from "@/lib/config";
+import { STATIC_DIRECTORY } from "@/constants";
 
 const app = e();
 
 app.use(e.json());
 
-app.use(e.static(config.api.staticPath));
+app.use(e.static(STATIC_DIRECTORY));
 
 app.use(e.urlencoded({ extended: false }));
 

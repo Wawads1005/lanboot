@@ -1,10 +1,9 @@
 import { BootError, getBootEntries } from "@/lib/boot";
-import config from "@/lib/config";
 import type e from "express";
 
 async function getEntries(_: e.Request, res: e.Response) {
   try {
-    const bootEntries = await getBootEntries(config.api.staticPath);
+    const bootEntries = await getBootEntries();
 
     res.status(200).json({ entries: bootEntries });
   } catch (error) {

@@ -7,7 +7,7 @@ async function scriptHandler(_: e.Request, res: e.Response) {
   try {
     const serverURL = interpolate`http://${"next-server"}:${config.api.port}`;
     const ipxe = new iPXE();
-    const bootEntries = await getBootEntries(config.api.staticPath);
+    const bootEntries = await getBootEntries();
 
     ipxe.ifconf();
     ipxe.set("next-server", config.network.address);

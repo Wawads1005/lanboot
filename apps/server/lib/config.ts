@@ -14,7 +14,6 @@ const config = {
   },
   api: {
     port: parsedConfig.API_PORT,
-    staticPath: parsedConfig.API_STATIC_PATH,
   },
   storage: {
     pool: parsedConfig.STORAGE_POOL,
