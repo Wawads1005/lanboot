@@ -5,7 +5,7 @@ import { BootError, getBootEntries, sendResponse } from "@/lib/boot";
 
 async function scriptHandler(_: e.Request, res: e.Response) {
   try {
-    const serverURL = interpolate`http://${"next-server"}:${config.api.port}`;
+    const serverURL = interpolate`http://${"next-server"}:${config.server.port}`;
     const ipxe = new iPXE();
     const bootEntries = await getBootEntries();
 

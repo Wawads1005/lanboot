@@ -4,7 +4,7 @@
   "globalEnv": ["NODE_ENV"],
   "tasks": {
     "dev": {
-      "env": ["NETWORK_*", "API_*", "STORAGE_*", "BOOT_*", "TFTP_*"],
+      "env": ["NETWORK_*", "SERVER_*", "STORAGE_*", "BOOT_*", "TFTP_*"],
       "cache": false,
       "persistent": true,
       "interactive": true

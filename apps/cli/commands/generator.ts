@@ -23,7 +23,7 @@ generator
     ipxe.set("next-server", networkInterfaceInfo.address);
     ipxe.imgexec(
       undefined,
-      interpolate`http://${"next-server"}:${config.API_PORT}/api/boot`,
+      interpolate`http://${"next-server"}:${config.SERVER_PORT}/api/boot`,
     );
 
     await fsPromises.writeFile(path.resolve(options.output), ipxe.build());

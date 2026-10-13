@@ -1,5 +1,5 @@
 import {
-  API_STATIC_DIRECTORY,
+  SERVER_STATIC_DIRECTORY,
   getNetworkInterfaceInfo,
   LIO_ISCSI_PREFIX,
 } from "@lanboot/core";
@@ -21,10 +21,10 @@ const config = {
       prefix: LIO_ISCSI_PREFIX,
     },
   },
-  api: {
-    port: parsedConfig.API_PORT,
+  server: {
+    port: parsedConfig.SERVER_PORT,
     static: {
-      directory: API_STATIC_DIRECTORY,
+      directory: SERVER_STATIC_DIRECTORY,
     },
   },
   storage: {

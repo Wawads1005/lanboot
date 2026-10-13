@@ -6,13 +6,13 @@ const app = e();
 
 app.use(e.json());
 
-app.use(e.static(config.api.static.directory));
+app.use(e.static(config.server.static.directory));
 
 app.use(e.urlencoded({ extended: false }));
 
 app.use(appRouter);
 
-app.listen(config.api.port, config.network.address, (error) => {
+app.listen(config.server.port, config.network.address, (error) => {
   if (error instanceof Error) {
     console.error(`Lanboot: ${error.message}`);
     return;
@@ -20,7 +20,7 @@ app.listen(config.api.port, config.network.address, (error) => {
 
   const url = new URL(
     "/",
-    `http://${config.network.address}:${config.api.port}`,
+    `http://${config.network.address}:${config.server.port}`,
   );
 
   console.log(`Server listening on ${url.href}`);

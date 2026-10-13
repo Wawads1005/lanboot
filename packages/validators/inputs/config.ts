@@ -5,7 +5,7 @@ type ConfigInput = z.infer<typeof configInput>;
 const configInput = z.object({
   NETWORK_INTERFACE: z.string(),
 
-  API_PORT: z.number().or(z.string().transform((input) => Number(input))),
+  SERVER_PORT: z.number().or(z.string().transform((input) => Number(input))),
 
   STORAGE_POOL: z.string(),
   STORAGE_MASTER: z.string(),

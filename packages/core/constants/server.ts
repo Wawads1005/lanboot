@@ -1,0 +1,5 @@
+const SERVER_DIRECTORY = "/opt/lanboot/server";
+const SERVER_FILEPATH = `${SERVER_DIRECTORY}/build/index.js`;
+const SERVER_STATIC_DIRECTORY = "public";
+
+export { SERVER_DIRECTORY, SERVER_FILEPATH, SERVER_STATIC_DIRECTORY };

@@ -9,8 +9,8 @@ import { loadModules } from "@/lib/modules";
 import { loadConfiguration } from "@/lib/configuration";
 import { generator } from "@/commands/generator";
 import {
-  API_DIRECTORY,
-  API_FILEPATH,
+  SERVER_DIRECTORY,
+  SERVER_FILEPATH,
   CONFIG_FILEPATH,
   SERVICE_FILEPATH,
   SERVICE_NAME,
@@ -40,9 +40,10 @@ lanboot
       `Wants=network-online.target ${services.join(" ")}`,
       undefined,
       "[Service]",
+      `WorkingDirectory=${SERVER_DIRECTORY}`,
       `EnvironmentFile=${CONFIG_FILEPATH}`,
       "Type=simple",
-      `ExecStart=${process.execPath} ${API_FILEPATH}`,
+      `ExecStart=${process.execPath} ${SERVER_FILEPATH}`,
       undefined,
       "[Install]",
       "WantedBy=multi-user.target",
@@ -56,13 +57,13 @@ lanboot
     }
 
     try {
-      await fsPromises.rm(API_DIRECTORY, { recursive: true });
+      await fsPromises.rm(SERVER_DIRECTORY, { recursive: true });
     } catch (error) {
       /**Best effort */
     }
 
     await $`pnpm -F @lanboot/server build`;
-    await $`pnpm -F @lanboot/server deploy --prod ${API_DIRECTORY}`;
+    await $`pnpm -F @lanboot/server deploy --prod ${SERVER_DIRECTORY}`;
 
     await fsPromises.writeFile(SERVICE_FILEPATH, system.join("\n"));
 
@@ -80,8 +81,8 @@ lanboot
       choices: networkInterfaces,
     });
 
-    const apiPort = await number({
-      message: "Enter your API Port:",
+    const serverPort = await number({
+      message: "Enter your Server Port:",
       default: 8080,
       required: true,
     });
@@ -142,7 +143,7 @@ lanboot
     });
 
     const config: ConfigInput = {
-      API_PORT: apiPort,
+      SERVER_PORT: serverPort,
       NETWORK_INTERFACE: networkInterface,
       BOOT_FIRMWARE: bootFirmware,
       BOOT_FILENAME: bootFilename,
