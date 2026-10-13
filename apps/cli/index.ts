@@ -155,7 +155,6 @@ lanboot
     const networkInterfaceInfo = detectInterfaceInfo(networkInterface);
 
     const config: ConfigInput = {
-      NODE_ENV: "production",
       API_PORT: apiPort,
       API_STATIC_PATH: apiStaticPath,
       NETWORK_ADDRESS: networkInterfaceInfo.address,

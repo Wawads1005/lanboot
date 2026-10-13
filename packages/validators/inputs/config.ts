@@ -3,8 +3,6 @@ import z from "zod";
 type ConfigInput = z.infer<typeof configInput>;
 
 const configInput = z.object({
-  NODE_ENV: z.enum(["production", "development"]),
-
   NETWORK_INTERFACE: z.string(),
   NETWORK_ADDRESS: z.ipv4(),
 

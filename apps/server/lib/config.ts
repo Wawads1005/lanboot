@@ -3,7 +3,6 @@ import { configInput } from "@lanboot/validators";
 const parsedConfig = configInput.parse(process.env);
 
 const config = {
-  environment: parsedConfig.NODE_ENV,
   network: {
     interface: parsedConfig.NETWORK_INTERFACE,
     address: parsedConfig.NETWORK_ADDRESS,
