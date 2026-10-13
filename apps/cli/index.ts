@@ -3,18 +3,18 @@ import { $ } from "zx";
 import { checkbox, confirm, input, number, select } from "@inquirer/prompts";
 import { Command } from "commander";
 import { configInput, type ConfigInput } from "@lanboot/validators";
-import {
-  CONFIG_FILEPATH,
-  SERVER_DIRECTORY,
-  SERVER_FILEPATH,
-  SERVICE_FILEPATH,
-  SERVICE_NAME,
-} from "@/constants";
 import { detectBlockdevices, detectInterfaces } from "@/lib/utils";
 import { dependencies } from "@/lib/dependencies";
 import { loadModules } from "@/lib/modules";
 import { loadConfiguration } from "@/lib/configuration";
 import { generator } from "@/commands/generator";
+import {
+  API_DIRECTORY,
+  API_FILEPATH,
+  CONFIG_FILEPATH,
+  SERVICE_FILEPATH,
+  SERVICE_NAME,
+} from "@lanboot/core";
 
 const lanboot = new Command("lanboot");
 const packages = dependencies.flatMap((dependency) => dependency.package);
@@ -40,30 +40,29 @@ lanboot
       `Wants=network-online.target ${services.join(" ")}`,
       undefined,
       "[Service]",
-      `WorkingDirectory=${SERVER_DIRECTORY}`,
       `EnvironmentFile=${CONFIG_FILEPATH}`,
       "Type=simple",
-      `ExecStart=${process.execPath} ${SERVER_FILEPATH}`,
+      `ExecStart=${process.execPath} ${API_FILEPATH}`,
       undefined,
       "[Install]",
       "WantedBy=multi-user.target",
     ];
 
-    const result = await $`systemctl cat lanboot.service`.nothrow();
+    const result = await $`systemctl cat ${SERVICE_NAME}.service`.nothrow();
 
     if (result.ok) {
-      await $`systemctl stop lanboot.service`;
-      await $`systemctl disable lanboot.service`;
+      await $`systemctl stop ${SERVICE_NAME}.service`;
+      await $`systemctl disable ${SERVICE_NAME}.service`;
     }
 
     try {
-      await fsPromises.rm(SERVER_DIRECTORY, { recursive: true });
+      await fsPromises.rm(API_DIRECTORY, { recursive: true });
     } catch (error) {
       /**Best effort */
     }
 
     await $`pnpm -F @lanboot/server build`;
-    await $`pnpm -F @lanboot/server deploy --prod ${SERVER_DIRECTORY}`;
+    await $`pnpm -F @lanboot/server deploy --prod ${API_DIRECTORY}`;
 
     await fsPromises.writeFile(SERVICE_FILEPATH, system.join("\n"));
 

@@ -3,7 +3,7 @@ import fsPromises from "node:fs/promises";
 import path from "node:path";
 import { iPXE } from "@lanboot/ipxe";
 import { bootEntry, type BootEntry } from "@lanboot/validators";
-import { STATIC_DIRECTORY } from "@/constants";
+import config from "@/lib/config";
 
 interface BootErrorOptions extends ErrorOptions {
   status?: number;
@@ -33,7 +33,7 @@ function sendResponse(res: e.Response, data: Error | iPXE, status = 500) {
 }
 
 async function getBootEntries() {
-  const dirents = await fsPromises.readdir(STATIC_DIRECTORY, {
+  const dirents = await fsPromises.readdir(config.api.static.directory, {
     withFileTypes: true,
   });
   const directories = dirents.filter((dirent) => dirent.isDirectory());

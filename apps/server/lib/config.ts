@@ -1,4 +1,8 @@
-import { getNetworkInterfaceInfo } from "@lanboot/core";
+import {
+  API_STATIC_DIRECTORY,
+  getNetworkInterfaceInfo,
+  LIO_ISCSI_PREFIX,
+} from "@lanboot/core";
 import { configInput } from "@lanboot/validators";
 
 const parsedConfig = configInput.parse(process.env);
@@ -14,11 +18,14 @@ const config = {
   },
   lio: {
     iscsi: {
-      prefix: "iqn.2026-10.lanboot.local",
+      prefix: LIO_ISCSI_PREFIX,
     },
   },
   api: {
     port: parsedConfig.API_PORT,
+    static: {
+      directory: API_STATIC_DIRECTORY,
+    },
   },
   storage: {
     pool: parsedConfig.STORAGE_POOL,

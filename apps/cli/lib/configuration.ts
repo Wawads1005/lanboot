@@ -1,4 +1,4 @@
-import { CONFIG_FILEPATH } from "@/constants";
+import { CONFIG_FILEPATH } from "@lanboot/core";
 import { configInput } from "@lanboot/validators";
 
 async function loadConfiguration() {

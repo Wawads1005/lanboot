@@ -4,7 +4,7 @@ import type { ConfigInput } from "@lanboot/validators";
 import { storage } from "@lanboot/storage";
 import { $ } from "zx";
 import lio from "@/lib/lio";
-import { getNetworkInterfaceInfo } from "@lanboot/core";
+import { getNetworkInterfaceInfo, LIO_ISCSI_PREFIX } from "@lanboot/core";
 
 interface Dependency {
   package: string;
@@ -156,12 +156,12 @@ const dependencies: Dependency[] = [
       }
 
       let foundMasterIscsi = await lio.iscsi.get({
-        wwn: `iqn.2026-10.lanboot.local:${config.STORAGE_MASTER}`,
+        wwn: `${LIO_ISCSI_PREFIX}:${config.STORAGE_MASTER}`,
       });
 
       if (!foundMasterIscsi) {
         foundMasterIscsi = await lio.iscsi.create({
-          wwn: `iqn.2026-10.lanboot.local:${config.STORAGE_MASTER}`,
+          wwn: `${LIO_ISCSI_PREFIX}:${config.STORAGE_MASTER}`,
         });
       }
 
