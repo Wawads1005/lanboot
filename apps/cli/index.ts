@@ -10,11 +10,7 @@ import {
   SERVICE_FILEPATH,
   SERVICE_NAME,
 } from "@/constants";
-import {
-  detectBlockdevices,
-  detectInterfaceInfo,
-  detectInterfaces,
-} from "@/lib/utils";
+import { detectBlockdevices, detectInterfaces } from "@/lib/utils";
 import { dependencies } from "@/lib/dependencies";
 import { loadModules } from "@/lib/modules";
 import { loadConfiguration } from "@/lib/configuration";
@@ -146,11 +142,8 @@ lanboot
       required: true,
     });
 
-    const networkInterfaceInfo = detectInterfaceInfo(networkInterface);
-
     const config: ConfigInput = {
       API_PORT: apiPort,
-      NETWORK_ADDRESS: networkInterfaceInfo.address,
       NETWORK_INTERFACE: networkInterface,
       BOOT_FIRMWARE: bootFirmware,
       BOOT_FILENAME: bootFilename,

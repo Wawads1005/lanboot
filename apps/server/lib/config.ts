@@ -1,3 +1,4 @@
+import { getNetworkInterfaceInfo } from "@lanboot/core";
 import { configInput } from "@lanboot/validators";
 
 const parsedConfig = configInput.parse(process.env);
@@ -5,7 +6,11 @@ const parsedConfig = configInput.parse(process.env);
 const config = {
   network: {
     interface: parsedConfig.NETWORK_INTERFACE,
-    address: parsedConfig.NETWORK_ADDRESS,
+    get address() {
+      const networkInterfaceInfo = getNetworkInterfaceInfo(this.interface);
+
+      return networkInterfaceInfo.address;
+    },
   },
   lio: {
     iscsi: {

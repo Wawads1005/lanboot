@@ -1,0 +1,9 @@
+{
+  "extends": "@lanboot/typescript/node.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./*"]
+    }
+  },
+  "exclude": ["node_modules", "build"]
+}

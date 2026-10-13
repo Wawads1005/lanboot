@@ -4,6 +4,7 @@ import type { ConfigInput } from "@lanboot/validators";
 import { storage } from "@lanboot/storage";
 import { $ } from "zx";
 import lio from "@/lib/lio";
+import { getNetworkInterfaceInfo } from "@lanboot/core";
 
 interface Dependency {
   package: string;
@@ -37,13 +38,17 @@ const dependencies: Dependency[] = [
         }
       }
 
+      const networkInterfaceInfo = getNetworkInterfaceInfo(
+        config.NETWORK_INTERFACE,
+      );
+
       const configuration: Array<string | undefined> = [
         `interface=${config.NETWORK_INTERFACE}`,
         "bind-interfaces",
         undefined,
         "port=0",
         undefined,
-        `dhcp-range=${config.NETWORK_ADDRESS},proxy`,
+        `dhcp-range=${networkInterfaceInfo.address},proxy`,
         undefined,
         "dhcp-match=set:ipxeclient,175",
         "dhcp-userclass=set:ipxeclient,iPXE",

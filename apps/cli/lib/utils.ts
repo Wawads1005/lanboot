@@ -1,26 +1,13 @@
 import os from "node:os";
 import { $ } from "zx";
 
-const interfaces = os.networkInterfaces();
-
 function detectInterfaces() {
-  const networkInterfaces = Object.keys(interfaces).filter(
+  const networkInterfaces = os.networkInterfaces();
+  const foundNetworkInterfaces = Object.keys(networkInterfaces).filter(
     (input) => input !== "lo",
   );
 
-  return networkInterfaces;
-}
-
-function detectInterfaceInfo(networkInterface: string) {
-  const networkInterfaceInfo = interfaces[networkInterface]?.find(
-    (info) => info.family === "IPv4",
-  );
-
-  if (!networkInterfaceInfo) {
-    throw new Error("No network interface choosen");
-  }
-
-  return networkInterfaceInfo;
+  return foundNetworkInterfaces;
 }
 
 interface Blockdevice {
@@ -65,4 +52,4 @@ async function detectBlockdevices() {
   );
 }
 
-export { detectInterfaces, detectInterfaceInfo, detectBlockdevices };
+export { detectInterfaces, detectBlockdevices };

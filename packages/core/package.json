@@ -1,0 +1,19 @@
+{
+  "name": "@lanboot/core",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "tsup --watch --sourcemap",
+    "build": "tsup --minify"
+  },
+  "type": "module",
+  "types": "./build/index.d.ts",
+  "main": "./build/index.js",
+  "module": "./build/index.js",
+  "devDependencies": {
+    "@lanboot/tsup": "workspace:*",
+    "@lanboot/typescript": "workspace:*",
+    "@types/node": "catalog:",
+    "tsup": "catalog:",
+    "typescript": "catalog:"
+  }
+}

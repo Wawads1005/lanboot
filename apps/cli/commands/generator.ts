@@ -1,5 +1,6 @@
 import { loadConfiguration } from "@/lib/configuration";
 import { interpolate, iPXE } from "@lanboot/ipxe";
+import { getNetworkInterfaceInfo } from "@lanboot/core";
 import { Command } from "commander";
 import path from "node:path";
 import fsPromises from "node:fs/promises";
@@ -12,10 +13,14 @@ generator
   .option("-o, --output <path>", "Output file", "lanboot.ipxe")
   .action(async (options) => {
     const config = await loadConfiguration();
+    const networkInterfaceInfo = getNetworkInterfaceInfo(
+      config.NETWORK_INTERFACE,
+    );
 
     const ipxe = new iPXE();
 
-    ipxe.set("next-server", config.NETWORK_ADDRESS);
+    ipxe.ifconf();
+    ipxe.set("next-server", networkInterfaceInfo.address);
     ipxe.imgexec(
       undefined,
       interpolate`http://${"next-server"}:${config.API_PORT}/api/boot`,

@@ -17,6 +17,7 @@
     "typescript": "catalog:"
   },
   "dependencies": {
+    "@lanboot/core": "workspace:*",
     "@lanboot/ipxe": "workspace:*",
     "@lanboot/lio": "workspace:*",
     "@lanboot/storage": "workspace:*",

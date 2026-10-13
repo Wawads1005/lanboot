@@ -203,6 +203,9 @@ importers:
       '@inquirer/prompts':
         specifier: ^8.7.3
         version: 8.7.3(@types/node@26.6.5)
+      '@lanboot/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@lanboot/ipxe':
         specifier: workspace:*
         version: link:../../packages/ipxe
@@ -240,6 +243,9 @@ importers:
 
   apps/server:
     dependencies:
+      '@lanboot/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@lanboot/ipxe':
         specifier: workspace:*
         version: link:../../packages/ipxe
@@ -268,6 +274,24 @@ importers:
       '@types/express':
         specifier: ^5.0.6
         version: 5.0.6
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.6.5
+      tsup:
+        specifier: 'catalog:'
+        version: 8.5.1(supports-color@10.2.2)(typescript@5.9.3)
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+
+  packages/core:
+    devDependencies:
+      '@lanboot/tsup':
+        specifier: workspace:*
+        version: link:../tsup
+      '@lanboot/typescript':
+        specifier: workspace:*
+        version: link:../typescript
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.5

@@ -4,7 +4,6 @@ type ConfigInput = z.infer<typeof configInput>;
 
 const configInput = z.object({
   NETWORK_INTERFACE: z.string(),
-  NETWORK_ADDRESS: z.ipv4(),
 
   API_PORT: z.number().or(z.string().transform((input) => Number(input))),
 
