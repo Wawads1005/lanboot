@@ -7,8 +7,6 @@ const configInput = z.object({
 
   SERVER_PORT: z.number().or(z.string().transform((input) => Number(input))),
 
-  STORAGE_POOL: z.string(),
-  STORAGE_MASTER: z.string(),
   STORAGE_MASTER_SIZE: z.string(),
   STORAGE_OVERLAY_SIZE: z.string(),
   STORAGE_DEVICES: z

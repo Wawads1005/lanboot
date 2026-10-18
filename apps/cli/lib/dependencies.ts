@@ -4,7 +4,14 @@ import type { ConfigInput } from "@lanboot/validators";
 import { storage } from "@lanboot/storage";
 import { $ } from "zx";
 import lio from "@/lib/lio";
-import { getNetworkInterfaceInfo, LIO_ISCSI_PREFIX } from "@lanboot/core";
+import {
+  getNetworkInterfaceInfo,
+  MASTER_LIO_BACKSTORES_BLOCK_NAME,
+  MASTER_LIO_ISCSI_TARGET,
+  MASTER_STORAGE_BLOCK_NAME,
+  MASTER_STORAGE_BLOCK_PATH,
+  STORAGE_POOL_NAME,
+} from "@lanboot/core";
 
 interface Dependency {
   package: string;
@@ -77,7 +84,7 @@ const dependencies: Dependency[] = [
     services: [],
     async configurator(config) {
       const devices = await storage.device.findMany();
-      const foundPool = await storage.pool.findOne(config.STORAGE_POOL);
+      const foundStoragePool = await storage.pool.findOne(STORAGE_POOL_NAME);
 
       const provisionedDevices = await Promise.all(
         config.STORAGE_DEVICES.map(async (deviceName) => {
@@ -89,31 +96,12 @@ const dependencies: Dependency[] = [
         }),
       );
 
-      if (!foundPool) {
-        const unusedDevices = provisionedDevices.filter(
-          (device) => !device.vg_name,
-        );
-
-        if (unusedDevices.length === 0) {
-          throw new Error(
-            `Cannot create pool ${config.STORAGE_POOL}: no unused PVs available`,
-          );
-        }
-
-        await storage.pool.create({
-          name: config.STORAGE_POOL,
-          devices: unusedDevices.map((device) => device.pv_name),
-        });
-
-        return;
-      }
-
       const unusedDevices = provisionedDevices.filter(
         (device) => !device.vg_name,
       );
 
       const conflictingDevices = provisionedDevices.filter(
-        (device) => device.vg_name && device.vg_name !== config.STORAGE_POOL,
+        (device) => device.vg_name && device.vg_name !== STORAGE_POOL_NAME,
       );
 
       if (conflictingDevices.length > 0) {
@@ -124,54 +112,67 @@ const dependencies: Dependency[] = [
         );
       }
 
-      if (unusedDevices.length > 0) {
-        await storage.pool.update(config.STORAGE_POOL, {
+      if (!foundStoragePool) {
+        if (unusedDevices.length === 0) {
+          throw new Error(
+            `Cannot create pool ${STORAGE_POOL_NAME}: no unused PVs available`,
+          );
+        }
+
+        await storage.pool.create({
+          name: STORAGE_POOL_NAME,
+          devices: unusedDevices.map((device) => device.pv_name),
+        });
+      } else if (unusedDevices.length > 0) {
+        await storage.pool.update(STORAGE_POOL_NAME, {
           addDevices: unusedDevices.map((device) => device.pv_name),
         });
       }
 
-      let foundMaster = await storage.block.findOne(
-        config.STORAGE_POOL,
-        "master",
+      let foundMasterStorageBlock = await storage.block.findOne(
+        STORAGE_POOL_NAME,
+        MASTER_STORAGE_BLOCK_NAME,
       );
 
-      if (!foundMaster) {
-        foundMaster = await storage.block.create({
-          name: "master",
-          pool: config.STORAGE_POOL,
+      if (!foundMasterStorageBlock) {
+        foundMasterStorageBlock = await storage.block.create({
+          name: MASTER_STORAGE_BLOCK_NAME,
+          pool: STORAGE_POOL_NAME,
           size: config.STORAGE_MASTER_SIZE,
         });
       }
 
       let foundMasterBackstoresBlock = await lio.backstores.block.get({
-        name: config.STORAGE_MASTER,
+        name: MASTER_LIO_BACKSTORES_BLOCK_NAME,
       });
 
       if (!foundMasterBackstoresBlock) {
         foundMasterBackstoresBlock = await lio.backstores.block.create({
-          dev: `/dev/${config.STORAGE_POOL}/${config.STORAGE_MASTER}`,
-          name: config.STORAGE_MASTER,
+          dev: MASTER_STORAGE_BLOCK_PATH,
+          name: MASTER_LIO_BACKSTORES_BLOCK_NAME,
           readOnly: false,
         });
       }
 
-      let foundMasterIscsi = await lio.iscsi.get({
-        wwn: `${LIO_ISCSI_PREFIX}:${config.STORAGE_MASTER}`,
+      let foundMasterLioIscsi = await lio.iscsi.get({
+        wwn: MASTER_LIO_ISCSI_TARGET,
       });
 
-      if (!foundMasterIscsi) {
-        foundMasterIscsi = await lio.iscsi.create({
-          wwn: `${LIO_ISCSI_PREFIX}:${config.STORAGE_MASTER}`,
+      if (!foundMasterLioIscsi) {
+        foundMasterLioIscsi = await lio.iscsi.create({
+          wwn: MASTER_LIO_ISCSI_TARGET,
         });
       }
 
-      let tpg1 = await foundMasterIscsi.tpg.get(1);
+      let foundMasterLioIscsiTpg1 = await foundMasterLioIscsi.tpg.get(1);
 
-      if (!tpg1) {
-        tpg1 = await foundMasterIscsi.tpg.create(1, { enable: false });
+      if (!foundMasterLioIscsiTpg1) {
+        foundMasterLioIscsiTpg1 = await foundMasterLioIscsi.tpg.create(1, {
+          enable: false,
+        });
       }
 
-      await tpg1.attrib.update({
+      await foundMasterLioIscsiTpg1.attrib.update({
         authentication: false,
         demo_mode_write_protect: false,
         prod_mode_write_protect: false,
@@ -179,19 +180,25 @@ const dependencies: Dependency[] = [
         cache_dynamic_acls: true,
       });
 
-      let lun0 = await tpg1.lun.get(0);
+      let foundMasterLioIscsiTpg1Lun0 =
+        await foundMasterLioIscsiTpg1.lun.get(0);
 
-      if (!lun0) {
-        lun0 = await tpg1.lun.create(0, foundMasterBackstoresBlock);
+      if (!foundMasterLioIscsiTpg1Lun0) {
+        foundMasterLioIscsiTpg1Lun0 = await foundMasterLioIscsiTpg1.lun.create(
+          0,
+          foundMasterBackstoresBlock,
+        );
       }
 
-      let portal = await tpg1.portal.get();
+      let foundMasterLioIscsiTpg1Portal =
+        await foundMasterLioIscsiTpg1.portal.get();
 
-      if (!portal) {
-        portal = await tpg1.portal.create();
+      if (!foundMasterLioIscsiTpg1Portal) {
+        foundMasterLioIscsiTpg1Portal =
+          await foundMasterLioIscsiTpg1.portal.create();
       }
 
-      await tpg1.enable();
+      await foundMasterLioIscsiTpg1.enable();
     },
   },
 ];

@@ -1,0 +1,4 @@
+const STORAGE_POOL_NAME = "lanboot";
+const STORAGE_POOL_PATH = `/dev/${STORAGE_POOL_NAME}`;
+
+export { STORAGE_POOL_NAME, STORAGE_POOL_PATH };

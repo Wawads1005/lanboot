@@ -100,18 +100,6 @@ lanboot
       }),
     });
 
-    const storagePool = await input({
-      message: "Enter your Storage Pool:",
-      default: "lanboot",
-      required: true,
-    });
-
-    const storageMaster = await input({
-      message: "Enter your Storage Master:",
-      default: "master",
-      required: true,
-    });
-
     const storageMasterSize = await input({
       message: "Enter your Storage Master Size:",
       default: "64G",
@@ -148,9 +136,7 @@ lanboot
       BOOT_FIRMWARE: bootFirmware,
       BOOT_FILENAME: bootFilename,
       TFTP_ROOT: tftpRoot,
-      STORAGE_POOL: storagePool,
       STORAGE_DEVICES: devices,
-      STORAGE_MASTER: storageMaster,
       STORAGE_MASTER_SIZE: storageMasterSize,
       STORAGE_OVERLAY_SIZE: storageOverlaySize,
     };

@@ -18,58 +18,71 @@ async function overlayHandler(req: e.Request, res: e.Response) {
       throw new BootError(message, { status: 400 });
     }
 
-    const overlayIscsi = `${config.lio.iscsi.prefix}:overlay-${parseInput.data.macAddress}`;
-    const overlayBlockstoresBlock = `overlay-${parseInput.data.macAddress}`;
-    const overlayBlock = `overlay-${parseInput.data.macAddress}`;
-    const overlayDevice = `/dev/${config.storage.pool}/overlay-${parseInput.data.macAddress}`;
+    const overlayLioIscsiTarget = config.overlay.lio.iscsi.target(
+      parseInput.data.macAddress,
+    );
+    const overlayLioBlockstoresBlockName =
+      config.overlay.lio.backstores.block.name(parseInput.data.macAddress);
+    const overlayStorageBlockName = config.overlay.storage.block.name(
+      parseInput.data.macAddress,
+    );
+    const overlayStorageBlockPath = config.overlay.storage.block.path(
+      parseInput.data.macAddress,
+    );
 
-    const foundIscsi = await lio.iscsi.get({ wwn: overlayIscsi });
+    const foundOverlayLioIscsi = await lio.iscsi.get({
+      wwn: overlayLioIscsiTarget,
+    });
 
-    if (foundIscsi) {
-      const activeSessions = await foundIscsi.session.count();
+    if (foundOverlayLioIscsi) {
+      const activeSessions = await foundOverlayLioIscsi.session.count();
 
       if (activeSessions > 0) {
         throw new BootError("An active session exists", { status: 409 });
       }
 
-      await lio.iscsi.delete(foundIscsi);
+      await lio.iscsi.delete(foundOverlayLioIscsi);
     }
 
-    const foundBackstoresBlock = await lio.backstores.block.get({
-      name: overlayBlockstoresBlock,
+    const foundOverlayBackstoresBlock = await lio.backstores.block.get({
+      name: overlayLioBlockstoresBlockName,
     });
 
-    if (foundBackstoresBlock) {
-      await lio.backstores.block.delete(foundBackstoresBlock);
+    if (foundOverlayBackstoresBlock) {
+      await lio.backstores.block.delete(foundOverlayBackstoresBlock);
     }
 
     const foundBlock = await storage.block.findOne(
-      config.storage.pool,
-      overlayBlock,
+      config.storage.pool.name,
+      overlayStorageBlockName,
     );
 
     if (foundBlock) {
-      await storage.block.delete(config.storage.pool, foundBlock.lv_name);
+      await storage.block.delete(config.storage.pool.name, foundBlock.lv_name);
     }
 
     await storage.block.create({
-      name: overlayBlock,
-      pool: config.storage.pool,
-      size: config.storage.overlay.size,
-      origin: config.storage.master.name,
+      name: overlayStorageBlockName,
+      pool: config.storage.pool.name,
+      size: config.overlay.storage.block.size,
+      origin: config.master.storage.block.name,
     });
 
-    const backstoresBlock = await lio.backstores.block.create({
-      name: overlayBlockstoresBlock,
-      dev: overlayDevice,
+    const overlayLioBackstoresBlock = await lio.backstores.block.create({
+      name: overlayLioBlockstoresBlockName,
+      dev: overlayStorageBlockPath,
       readOnly: false,
     });
 
-    const iscsi = await lio.iscsi.create({ wwn: overlayIscsi });
-    const tpg1 = await iscsi.tpg.create(1, { enable: false });
+    const overlayLioIscsi = await lio.iscsi.create({
+      wwn: overlayLioIscsiTarget,
+    });
+    const overlayLioIscsiTpg1 = await overlayLioIscsi.tpg.create(1, {
+      enable: false,
+    });
 
-    await tpg1.lun.create(0, backstoresBlock);
-    await tpg1.attrib.update({
+    await overlayLioIscsiTpg1.lun.create(0, overlayLioBackstoresBlock);
+    await overlayLioIscsiTpg1.attrib.update({
       authentication: false,
       demo_mode_write_protect: false,
       prod_mode_write_protect: false,
@@ -77,8 +90,8 @@ async function overlayHandler(req: e.Request, res: e.Response) {
       cache_dynamic_acls: true,
     });
 
-    await tpg1.portal.create();
-    await tpg1.enable();
+    await overlayLioIscsiTpg1.portal.create();
+    await overlayLioIscsiTpg1.enable();
 
     const ipxe = new iPXE();
 
@@ -88,7 +101,7 @@ async function overlayHandler(req: e.Request, res: e.Response) {
 
     ipxe.sanhook(
       { drive: "0x80" },
-      interpolate`iscsi:${"next-server"}::::${overlayIscsi}`,
+      interpolate`iscsi:${"next-server"}::::${overlayLioIscsiTarget}`,
     );
 
     ipxe.sanboot({ drive: "0x80" });

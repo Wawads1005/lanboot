@@ -64,9 +64,9 @@ async function scriptHandler(_: e.Request, res: e.Response) {
         ipxe.set("next-server", config.network.address);
         ipxe.set("keep-san", 1);
 
-        const masterIscsi = interpolate`iscsi:${"next-server"}::::${config.lio.iscsi.prefix}:${config.storage.master.name}`;
+        const masterIscsiURL = interpolate`iscsi:${"next-server"}::::${config.master.lio.iscsi.target}`;
 
-        ipxe.sanhook({ drive: "0x80" }, masterIscsi);
+        ipxe.sanhook({ drive: "0x80" }, masterIscsiURL);
 
         const entryURL = `${serverURL}/${bootEntry.id}`;
         const kernelURL = `${entryURL}/${bootEntry.kernel.path}`;
@@ -101,7 +101,7 @@ async function scriptHandler(_: e.Request, res: e.Response) {
     ipxe.label("master", (ipxe) => {
       ipxe.sanhook(
         { drive: "0x80" },
-        interpolate`iscsi:${"next-server"}::::${config.lio.iscsi.prefix}:${config.storage.master.name}`,
+        interpolate`iscsi:${"next-server"}::::${config.master.lio.iscsi.target}`,
       );
 
       ipxe.sanboot({ drive: "0x80" });
