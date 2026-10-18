@@ -33,9 +33,10 @@ function sendResponse(res: e.Response, data: Error | iPXE, status = 500) {
 }
 
 async function getBootEntries() {
-  const dirents = await fsPromises.readdir(config.server.static.directory, {
-    withFileTypes: true,
-  });
+  const dirents = await fsPromises.readdir(
+    path.resolve(config.server.static.directory, "boot"),
+    { withFileTypes: true },
+  );
   const directories = dirents.filter((dirent) => dirent.isDirectory());
   const bootEntries: BootEntry[] = [];
 

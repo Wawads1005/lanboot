@@ -1,1 +1,2 @@
-public/*
+public/boot/*
+!public/boot/.gitkeep

@@ -5,5 +5,3 @@ build
 !.env.example
 
 .turbo
-
-!.gitkeep

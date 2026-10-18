@@ -11,29 +11,54 @@ Lanboot combines PXE/iPXE network booting, centralized storage, Windows deployme
 ## Features
 
 - **PXE/iPXE booting** — Boot clients over the local network.
-- **Dynamic boot entries** — Generate the boot menu from discovered boot entries instead of relying on a hardcoded operating-system menu.
+- **Dynamic boot entries** — Discover boot entries from the filesystem instead of relying on a hardcoded operating-system menu.
+- **Boot-entry API** — Retrieve the available boot entries or a specific entry by ID.
 - **Windows PE deployment** — Load WinPE to install and prepare Windows.
 - **Centralized storage** — Manage master images and client overlays using LVM.
 - **iSCSI boot infrastructure** — Export master images and client-specific overlays to diskless clients.
 - **Service configuration** — Configure required system services through the Lanboot CLI.
 - **Automated setup** — Install dependencies, deploy the server, and configure its services.
 
-Some workflows still require manual configuration. Boot-entry creation and asset management are not yet exposed through dedicated API endpoints.
+Some workflows still require manual configuration. Boot-entry creation and asset uploads are not yet exposed through dedicated management endpoints.
 
 ## Architecture
 
 Lanboot orchestrates existing Linux services and boot technologies rather than implementing every component itself.
 
-| Component         | Purpose                                              |
-| ----------------- | ---------------------------------------------------- |
-| dnsmasq           | DHCP/PXE boot configuration and TFTP services        |
-| iPXE              | Network bootloader and boot script execution         |
-| Node.js API       | Generates boot scripts and serves static boot assets |
-| WinPE and wimboot | Load the Windows preinstallation environment         |
-| Samba (SMB)       | Provide network access to Windows installation media |
-| LVM               | Manage master volumes and client overlays            |
-| Linux LIO/iSCSI   | Export remote block storage to clients               |
-| systemd           | Manage Lanboot and its configured services           |
+| Component         | Purpose                                                                        |
+| ----------------- | ------------------------------------------------------------------------------ |
+| dnsmasq           | DHCP/PXE boot configuration and TFTP services                                  |
+| iPXE              | Network bootloader and boot script execution                                   |
+| Node.js API       | Generates boot scripts, exposes boot-entry endpoints, and serves static assets |
+| WinPE and wimboot | Load the Windows preinstallation environment                                   |
+| Samba (SMB)       | Provide network access to Windows installation media                           |
+| LVM               | Manage master volumes and client overlays                                      |
+| Linux LIO/iSCSI   | Export remote block storage to clients                                         |
+| systemd           | Manage Lanboot and its configured services                                     |
+
+### Directory structure
+
+The deployed server uses `public/` as its static directory. Boot entries and their assets are stored under `public/boot/`, with each entry identified by its directory name.
+
+```text
+/opt/lanboot/server/
+├── build/
+├── public/
+│   ├── index.html
+│   ├── assets/
+│   └── boot/
+│       └── winpe/
+│           ├── metadata.json
+│           ├── wimboot
+│           ├── bcd
+│           ├── boot.sdi
+│           └── boot.wim
+└── package.json
+```
+
+The example shows the intended layout; the web interface and other static assets may vary with the deployed build.
+
+Each boot entry has its own directory under `public/boot/`. Its metadata describes the entry, while its kernel and image files are served as static assets.
 
 ### Boot workflow
 
@@ -41,7 +66,7 @@ Lanboot orchestrates existing Linux services and boot technologies rather than i
 2. The client downloads the iPXE binary through TFTP.
 3. iPXE requests the boot script from the Lanboot API over HTTP.
 4. Lanboot generates a menu from the available boot entries and iSCSI options.
-5. When a boot entry is selected, iPXE hooks the configured master iSCSI disk and loads the entry's kernel and image files.
+5. When a boot entry is selected, iPXE hooks the configured master iSCSI disk as a SAN device and loads the entry's kernel and image files.
 6. For Windows installation, WinPE accesses the Windows installation media separately, such as through SMB or USB.
 7. After Windows has been installed and the master image is bootable, clients can boot from their respective iSCSI overlays.
 
@@ -159,7 +184,7 @@ cd ipxe/src
 
 Lanboot uses the iPXE `params` and `param` commands to send the client's MAC address to the overlay endpoint through an HTTP POST request.
 
-iPXE disables `PARAM_CMD` for BIOS builds by default. To enable it, edit `config/general.h` and locate this section:
+iPXE disables `PARAM_CMD` for BIOS builds by default. Edit `config/general.h` and locate this section:
 
 ```c
 /* Disable commands not historically included in BIOS builds */
@@ -214,50 +239,50 @@ The required files are:
 - `boot.sdi`
 - `boot.wim`
 
-The current Windows boot-entry example uses the ID `winpe`, place the files under the corresponding entry directory:
+The current Windows boot-entry example uses the ID `winpe`. Place the files in its directory under `public/boot/`.
 
 ```text
 /opt/lanboot/server/public/
-└── winpe/
-    ├── wimboot
-    ├── bcd
-    ├── boot.sdi
-    └── boot.wim
+└── boot/
+    └── winpe/
+        ├── metadata.json
+        ├── wimboot
+        ├── bcd
+        ├── boot.sdi
+        └── boot.wim
 ```
-
-The paths and filenames above match the current example boot entry. If your boot-entry definition uses different paths, the on-disk files must match it.
 
 Create the directory:
 
 ```bash
-sudo mkdir -p /opt/lanboot/server/public/winpe
+sudo mkdir -p /opt/lanboot/server/public/boot/winpe
 ```
 
 From PowerShell on the technician machine, copy the files to the server. Replace the example username, IP address, and source paths as necessary:
 
 ```powershell
-scp C:\WinPE\amd64\media\boot\BCD wawads@192.168.100.243:/opt/lanboot/server/public/winpe/bcd
+scp C:\WinPE\amd64\media\boot\BCD wawads@192.168.100.243:/opt/lanboot/server/public/boot/winpe/bcd
 
-scp C:\WinPE\amd64\media\boot\boot.sdi wawads@192.168.100.243:/opt/lanboot/server/public/winpe/boot.sdi
+scp C:\WinPE\amd64\media\boot\boot.sdi wawads@192.168.100.243:/opt/lanboot/server/public/boot/winpe/boot.sdi
 
-scp C:\WinPE\amd64\media\sources\boot.wim wawads@192.168.100.243:/opt/lanboot/server/public/winpe/boot.wim
+scp C:\WinPE\amd64\media\sources\boot.wim wawads@192.168.100.243:/opt/lanboot/server/public/boot/winpe/boot.wim
 ```
 
 Download `wimboot` from the [official iPXE wimboot page](https://ipxe.org/wimboot) and copy it into the entry directory:
 
 ```bash
-sudo cp ~/Downloads/wimboot /opt/lanboot/server/public/winpe/wimboot
+sudo cp ~/Downloads/wimboot /opt/lanboot/server/public/boot/winpe/wimboot
 ```
 
 Ensure the Lanboot service can read all four files.
 
-The static path is resolved relative to the deployed server directory because the generated systemd service uses `/opt/lanboot/server` as its working directory. An absolute static path can also be configured.
+The `metadata.json` file defines the entry and its image paths. See Step 7 for an example.
 
 ### 7. Configure a boot entry
 
-Lanboot discovers boot entries and uses them to generate the boot menu. Each entry has a stable ID, a display name, a kernel definition, and a list of images to load.
+Lanboot discovers boot entries by reading directories under `public/boot/`. Each entry must have valid metadata that describes its ID, display name, kernel, and images.
 
-A Windows PE entry conceptually contains:
+For example, `public/boot/winpe/metadata.json` can contain:
 
 ```json
 {
@@ -289,17 +314,19 @@ A Windows PE entry conceptually contains:
 }
 ```
 
-This illustrates the entry's data model; use the metadata format and discovery mechanism implemented by the current `getBootEntries` function.
+This example illustrates the expected entry structure. Use the metadata schema and validation implemented by the current `getBootEntries` function.
 
-- `id` identifies the entry and its static asset directory.
+- `id` identifies the entry and its asset directory.
 - `name` is displayed in the boot menu.
 - `kernel.name` is the name passed to iPXE's image-loading command.
 - `kernel.path` identifies the actual file to download.
 - `images` lists the additional files required by the boot program.
-- `args` supplies the arguments or filenames passed to iPXE.
+- `args` supplies the arguments or filenames passed to the boot program.
 - `version` identifies the boot-entry schema version.
 
-The boot-entry creation and upload workflow is currently manual. A dedicated CLI command or API endpoint for creating entries and uploading their assets has not yet been implemented.
+The entry ID should match the directory name. For example, the `winpe` entry is stored under `public/boot/winpe/`.
+
+Boot-entry creation and asset uploads are currently manual. Dedicated management endpoints for creating entries and uploading their assets have not yet been implemented.
 
 ### 8. Start Lanboot
 
@@ -341,7 +368,7 @@ Before booting a client, verify:
 - The DHCP/PXE configuration points clients to the appropriate boot program.
 - TFTP serves the configured boot filename from the configured root.
 - The HTTP API is reachable from the client network.
-- The boot-entry assets are accessible through the API's static file server.
+- The boot-entry metadata and assets are accessible through the API's static file server.
 
 If your network already has a DHCP server, ensure the PXE setup is compatible with it. Avoid running a competing DHCP server. Use the proxy-DHCP arrangement configured for your environment where appropriate.
 
@@ -413,7 +440,7 @@ Successful PXE boot and WinPE loading do not guarantee that Windows will boot su
 
 ## API Reference
 
-Lanboot exposes an HTTP endpoint for generating the iPXE boot menu and preparing client-specific iSCSI overlays. It also serves static files from the configured static directory.
+Lanboot exposes endpoints for generating the iPXE boot menu, retrieving boot-entry information, and preparing client-specific iSCSI overlays. It also serves static files from the configured static directory.
 
 ### Base URL
 
@@ -427,10 +454,12 @@ Replace `<server-ip>` with the Lanboot server's IP address and `<api-port>` with
 
 ### Endpoints
 
-| Method | Endpoint    | Description                                                                           |
-| ------ | ----------- | ------------------------------------------------------------------------------------- |
-| `GET`  | `/api/boot` | Discovers boot entries and generates the iPXE boot menu and scripts.                  |
-| `POST` | `/api/boot` | Creates or recreates a client-specific overlay and returns an iPXE script to boot it. |
+| Method | Endpoint              | Description                                                                           |
+| ------ | --------------------- | ------------------------------------------------------------------------------------- |
+| `GET`  | `/api/boot`           | Discovers boot entries and generates the iPXE boot menu and scripts.                  |
+| `POST` | `/api/boot`           | Creates or recreates a client-specific overlay and returns an iPXE script to boot it. |
+| `GET`  | `/api/boot/entry`     | Retrieves the available boot entries.                                                 |
+| `GET`  | `/api/boot/entry/:id` | Retrieves a specific boot entry by its ID.                                            |
 
 ### `GET /api/boot`
 
@@ -465,6 +494,96 @@ For the Windows PE example, `wimboot` loads the BCD, boot sector disk image, and
 Content type: `text/plain`
 
 The response body contains the generated iPXE script.
+
+### `GET /api/boot/entry`
+
+Retrieves the available boot entries discovered under the server's `public/boot/` directory.
+
+#### Response
+
+**Success:** `200 OK`
+
+The response is a JSON object containing a `bootEntries` array.
+
+Example response:
+
+```json
+{
+  "bootEntries": [
+    {
+      "id": "winpe",
+      "name": "Windows Preinstallation Environment",
+      "version": 1,
+      "kernel": {
+        "name": "wimboot",
+        "path": "wimboot",
+        "args": ["index=1", "gui"]
+      },
+      "images": [
+        {
+          "name": "BCD",
+          "path": "bcd",
+          "args": ["BCD"]
+        }
+      ]
+    }
+  ]
+}
+```
+
+The example is illustrative; actual entries depend on the discovered metadata and its schema.
+
+### `GET /api/boot/entry/:id`
+
+Retrieves one boot entry by its ID.
+
+Replace `:id` with the entry's ID. For example:
+
+```bash
+curl http://192.168.100.243:8080/api/boot/entry/winpe
+```
+
+#### Response
+
+**Success:** `200 OK`
+
+The response is a JSON object containing the requested `bootEntry`.
+
+Example response:
+
+```json
+{
+  "bootEntry": {
+    "id": "winpe",
+    "name": "Windows Preinstallation Environment",
+    "version": 1,
+    "kernel": {
+      "name": "wimboot",
+      "path": "wimboot",
+      "args": ["index=1", "gui"]
+    },
+    "images": [
+      {
+        "name": "BCD",
+        "path": "bcd",
+        "args": ["BCD"]
+      }
+    ]
+  }
+}
+```
+
+**Not found:** `404 Not Found`
+
+If no boot entry matches the requested ID, the endpoint returns a JSON error object:
+
+```json
+{
+  "message": "Boot entry doesn't exists"
+}
+```
+
+The message reflects the current handler implementation.
 
 ### `POST /api/boot`
 
@@ -510,16 +629,18 @@ The response body contains an iPXE script that connects to the newly configured 
 
 ### Error responses
 
-Errors are returned as plain-text iPXE scripts that display a Lanboot error message.
+Error behavior depends on the endpoint and its handler.
 
-| Status                      | Condition                                                 |
-| --------------------------- | --------------------------------------------------------- |
-| `500 Internal Server Error` | A validation or processing error occurs.                  |
-| `404 Not Found`             | An unsupported HTTP method is used for the boot endpoint. |
+| Endpoint                  | Status                      | Condition                                       |
+| ------------------------- | --------------------------- | ----------------------------------------------- |
+| `GET /api/boot/entry/:id` | `404 Not Found`             | The requested boot entry does not exist.        |
+| `GET /api/boot/entry`     | `500 Internal Server Error` | An error occurs while discovering boot entries. |
+| `GET /api/boot`           | `500 Internal Server Error` | An error occurs while generating the boot menu. |
+| `POST /api/boot`          | `500 Internal Server Error` | A validation or processing error occurs.        |
 
-The current handler returns `500` for caught validation errors and other exceptions. Error responses contain an iPXE `echo` command with the error name and message.
+The boot-script handlers return iPXE-formatted error responses where applicable. The boot-entry retrieval endpoints return JSON error objects.
 
-### Example request
+### Example overlay request
 
 Request a client-specific overlay using `curl`:
 
@@ -534,19 +655,27 @@ The response should contain an iPXE script if the overlay is created successfull
 
 ### Static file serving
 
-For example, with `API_PORT=8080`, and a boot entry whose ID is `winpe`, the file at:
+Lanboot serves files relative to its static directory, which contains the `boot/` directory.
+
+For a boot entry with the ID `winpe`, the file:
 
 ```text
-public/winpe/wimboot
+public/boot/winpe/wimboot
 ```
 
 is available at:
 
 ```text
-http://192.168.100.243:8080/winpe/wimboot
+http://192.168.100.243:8080/boot/winpe/wimboot
 ```
 
-The URL depends on the configured static directory, entry ID, and relative asset path.
+Likewise, the metadata file is accessible at:
+
+```text
+http://192.168.100.243:8080/boot/winpe/metadata.json
+```
+
+The URL depends on the configured server address, port, entry ID, and relative asset path.
 
 ## CLI Reference
 
@@ -582,15 +711,27 @@ Check the embedded `lanboot.ipxe` script, the configured server address and API 
 
 ### A boot entry does not appear
 
-Check that the entry is discoverable by the current `getBootEntries` implementation and that its metadata passes validation. Verify that the entry ID and display name are valid.
+Check that the entry exists under `public/boot/`, that its directory contains valid `metadata.json`, and that its metadata passes validation. Verify that the entry ID and display name are valid.
+
+You can inspect the discovered entries through:
+
+```bash
+curl http://192.168.100.243:8080/api/boot/entry
+```
+
+To retrieve a specific entry:
+
+```bash
+curl http://192.168.100.243:8080/api/boot/entry/winpe
+```
 
 ### A boot entry fails to load
 
-Check that its kernel and image paths match the actual files under the configured static directory. Confirm that the generated iPXE script requests the expected URLs and passes the correct image names and arguments to the boot program.
+Check that its kernel and image paths match the actual files under `public/boot/<id>/`. Confirm that the generated iPXE script requests the expected URLs and passes the correct image names and arguments to the boot program.
 
 ### WinPE does not boot
 
-Verify that `wimboot`, `BCD`, `boot.sdi`, and `boot.wim` exist in the expected locations. Check that the BCD configuration agrees with the files supplied to `wimboot`.
+Verify that `wimboot`, `bcd`, `boot.sdi`, and `boot.wim` exist in the expected locations. Check that the BCD configuration agrees with the files supplied to `wimboot`.
 
 See the [iPXE wimboot architecture notes](https://ipxe.org/appnote/wimboot_architecture) for further diagnostics.
 
