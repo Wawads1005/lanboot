@@ -75,6 +75,11 @@ lanboot
   .description("configuration setup")
   .action(async () => {
     const networkInterfaces = detectInterfaces();
+    const allBlockdevices = await detectBlockdevices();
+
+    if (allBlockdevices.length === 0) {
+      throw new Error("Need atleast 1 blockdevice");
+    }
 
     const networkInterface = await select({
       message: "Select a Network Interface:",
@@ -86,8 +91,6 @@ lanboot
       default: 8080,
       required: true,
     });
-
-    const allBlockdevices = await detectBlockdevices();
 
     const devices = await checkbox({
       message: "Check every blockdevices lanboot is allowed to use:",
