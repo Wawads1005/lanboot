@@ -6,9 +6,6 @@
     "build": "tsup --minify"
   },
   "type": "module",
-  "types": "./build/index.d.ts",
-  "main": "./build/index.js",
-  "module": "./build/index.js",
   "devDependencies": {
     "@lanboot/tsup": "workspace:*",
     "@lanboot/typescript": "workspace:*",
@@ -18,5 +15,12 @@
   },
   "dependencies": {
     "zx": "catalog:"
+  },
+  "exports": {
+    ".": {
+      "types": "./build/index.d.ts",
+      "import": "./build/index.js",
+      "require": "./build/index.cjs"
+    }
   }
 }
